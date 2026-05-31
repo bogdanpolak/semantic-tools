@@ -77,7 +77,6 @@
         <Manifest_File>(None)</Manifest_File>
         <AppDPIAwarenessMode>none</AppDPIAwarenessMode>
         <DCC_UnitSearchPath>..\delphi-ast;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-        <Icon_MainIcon>AppIcon.ico</Icon_MainIcon>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">

@@ -7,6 +7,7 @@ This document describes the metrics currently produced by SourceLens and candida
 - **Method identity**: `UnitName`, `ClassName`, `MethodName` — captured for each method (see SourceLens.Types).
 - **Visibility**: `IsPublic` — derived from interface/type declarations via PublicMethod extraction.
 - **BodyLines**: number of executable body lines inside the method. Calculated from the method `ntStatements` node span.
+- **TestInvocationCount**: heuristic count of method invocations found in parsed test-project ASTs.
 - **Parse failures**: files that failed to parse are surfaced in the analysis result.
 
 Key implementation locations:
@@ -18,6 +19,7 @@ Key implementation locations:
 
 ## How the metrics are computed (notes)
 - `BodyLines` uses the `ntStatements` child node's `Line` and `EndLine` to count body lines.
+- `TestInvocationCount` currently parses test-project `.pas` files with DelphiAST and counts resolved call targets. It handles direct function calls, class-qualified calls such as `TGame.Create(...)`, and simple typed receivers such as `FGame.MovePlayerBy(...)`. It still favors a small implementation over full semantic resolution, so chained receivers and more advanced dispatch patterns can be undercounted.
 
 ## Next metric (not yet implemented)
 
