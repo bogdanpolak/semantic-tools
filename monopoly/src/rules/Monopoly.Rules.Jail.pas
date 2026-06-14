@@ -3,6 +3,7 @@ unit Monopoly.Rules.Jail;
 interface
 
 uses
+  Monopoly.Transactions,
   Monopoly.Types;
 
 const
@@ -24,14 +25,16 @@ type
     ): TJailResult; static;
   end;
 
-function JailRules(Game: TGame): TJailResult;
+function JailRules(
+  const AGame: TGame;
+  const ATransactions: ITransactionService
+  ): TJailResult;
 procedure SendCurrentPlayerToJail(Game: TGame);
 
 implementation
 
 uses
-  System.SysUtils,
-  Monopoly.Utils;
+  System.SysUtils;
 
 procedure ReleasePlayerFromJail(Player: TPlayer);
 begin
@@ -39,13 +42,16 @@ begin
   Player.FailedJailRolls := 0;
 end;
 
-function JailRules(Game: TGame): TJailResult;
+function JailRules(
+  const AGame: TGame;
+  const ATransactions: ITransactionService
+  ): TJailResult;
 var
   Player: TPlayer;
   JailCard: THeldJailCard;
   Roll: TDiceRoll;
 begin
-  Player := Game.CurrentPlayer;
+  Player := AGame.CurrentPlayer;
   if (Player = nil) or Player.IsBankrupt or not Player.IsInJail then
   begin
     Exit(TJailResult.Create(True, Default(TDiceRoll), False, False));
@@ -57,28 +63,28 @@ begin
     Player.GetOutOfJailCards.Delete(0);
     JailCard.Deck.ReturnCard(JailCard.Card);
     ReleasePlayerFromJail(Player);
-    Game.Log(Format('%s uses a Get Out of Jail Free card.', [Player.Name]));
+    AGame.Log(Format('%s uses a Get Out of Jail Free card.', [Player.Name]));
     Exit(TJailResult.Create(True, Default(TDiceRoll), False, False));
   end;
 
   if Player.Money >= JAIL_FINE then
   begin
     ReleasePlayerFromJail(Player);
-    Game.AdjustPlayerMoney(Player, -JAIL_FINE);
-    Game.Log(Format('%s pays $50 to get out of jail.', [Player.Name]));
+    AGame.PayBank(Player, JAIL_FINE);
+    AGame.Log(Format('%s pays $50 to get out of jail.', [Player.Name]));
     Exit(TJailResult.Create(True, Default(TDiceRoll), False, False));
   end;
 
-  Roll := Game.RollDice;
+  Roll := AGame.RollDice;
   if Roll.IsDouble then
   begin
     ReleasePlayerFromJail(Player);
-    Game.Log(Format('%s rolls doubles and gets out of jail.', [Player.Name]));
+    AGame.Log(Format('%s rolls doubles and gets out of jail.', [Player.Name]));
     Exit(TJailResult.Create(True, Roll, True, True));
   end;
 
   Inc(Player.FailedJailRolls);
-  Game.Log(Format('%s fails to roll doubles and remains in jail.', [Player.Name]));
+  AGame.Log(Format('%s fails to roll doubles and remains in jail.', [Player.Name]));
 
   if Player.FailedJailRolls < MAX_FAILED_JAIL_ROLLS then
   begin
@@ -88,12 +94,12 @@ begin
   ReleasePlayerFromJail(Player);
   if Player.Money < JAIL_FINE then
   begin
-    MarkPlayerBankrupt(Player, Game.Board, nil, Game.OnLog);
+    ATransactions.MarkPlayerBankrupt(Player, AGame.Board, nil, AGame.OnLog);
     Exit(TJailResult.Create(False, Default(TDiceRoll), False, True));
   end;
 
-  Game.AdjustPlayerMoney(Player, -JAIL_FINE);
-  Game.Log(Format('%s pays $50 to get out of jail.', [Player.Name]));
+  AGame.PayBank(Player, JAIL_FINE);
+  AGame.Log(Format('%s pays $50 to get out of jail.', [Player.Name]));
   Result := TJailResult.Create(True, Roll, True, True);
 end;
 

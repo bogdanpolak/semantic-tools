@@ -7,71 +7,32 @@ uses
   System.SysUtils,
   Monopoly.Types;
 
-function GetOwner(Game: TGame): TPlayer;
-function TransferMoney(
-  FromPlayer: TPlayer;
-  ToPlayer: TPlayer;
-  Amount: integer;
-  Board: TObjectList<TTile>;
-  const Log: TLogProc = nil
-  ): integer;
-function ChargePlayer(
-  Player: TPlayer;
-  Amount: integer;
-  Board: TObjectList<TTile>;
-  const Log: TLogProc = nil
-  ): integer;
-procedure MarkPlayerBankrupt(
-  Player: TPlayer;
-  Board: TObjectList<TTile>;
-  Creditor: TPlayer = nil;
-  const Log: TLogProc = nil
-  );
+function JoinPlayerNames(const Players: TObjectList<TPlayer>): string;
+function LeftPad(const S: string; Width: Integer): string;
 
 implementation
 
-uses
-  Monopoly.Transactions;
-
-function TransactionService: ITransactionService;
+function JoinPlayerNames(const Players: TObjectList<TPlayer>): string;
+var
+  Index: integer;
 begin
-  Result := CreateTransactionService;
+  Result := '';
+  for Index := 0 to Players.Count - 1 do
+  begin
+    if Index > 0 then
+    begin
+      Result := Result + ', ';
+    end;
+    Result := Result + Players[Index].Name;
+  end;
 end;
 
-function GetOwner(Game: TGame): TPlayer;
+function LeftPad(const S: string; Width: Integer): string;
 begin
-  Result := Game.CurrentTileOwner;
-end;
-
-function TransferMoney(
-  FromPlayer: TPlayer;
-  ToPlayer: TPlayer;
-  Amount: integer;
-  Board: TObjectList<TTile>;
-  const Log: TLogProc
-  ): integer;
-begin
-  Result := TransactionService.TransferMoney(FromPlayer, ToPlayer, Amount, Board, Log);
-end;
-
-function ChargePlayer(
-  Player: TPlayer;
-  Amount: integer;
-  Board: TObjectList<TTile>;
-  const Log: TLogProc
-  ): integer;
-begin
-  Result := TransactionService.ChargePlayer(Player, Amount, Board, Log);
-end;
-
-procedure MarkPlayerBankrupt(
-  Player: TPlayer;
-  Board: TObjectList<TTile>;
-  Creditor: TPlayer;
-  const Log: TLogProc
-  );
-begin
-  TransactionService.MarkPlayerBankrupt(Player, Board, Creditor, Log);
+  if Length(S) >= Width then
+    Result := S
+  else
+    Result := StringOfChar(' ', Width - Length(S)) + S;
 end;
 
 end.

@@ -7,9 +7,7 @@ type
     UnitName: string;
     ClassName: string;
     MethodName: string;
-    IsPublic: boolean;
     BodyLines: integer;
-    MaxIndentationLevel: integer;
   end;
 
   TParseFailure = record

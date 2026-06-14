@@ -70,38 +70,41 @@
         <DCC_IntegerOverflowCheck>true</DCC_IntegerOverflowCheck>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
-        <DCC_ExeOutput>../../bin</DCC_ExeOutput>
+        <DCC_ExeOutput>..\..\bin</DCC_ExeOutput>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <Manifest_File>(None)</Manifest_File>
         <AppDPIAwarenessMode>none</AppDPIAwarenessMode>
-        <DCC_DcuOutput>../../bin</DCC_DcuOutput>
+        <DCC_DcuOutput>..\..\bin</DCC_DcuOutput>
+        <DCC_UnitSearchPath>..\src\rules;..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="Monopoly.Tests.Board.pas"/>
         <DCCReference Include="Monopoly.Tests.Factories.pas"/>
-        <DCCReference Include="Monopoly.Tests.GameLoop.pas"/>
+        <DCCReference Include="Monopoly.Tests.PropertyDevelopment.pas"/>
+        <DCCReference Include="Monopoly.Tests.GameStatus.pas"/>
+        <DCCReference Include="Monopoly.Tests.PlayTurn.pas"/>
         <DCCReference Include="Monopoly.Tests.Transactions.pas"/>
-        <DCCReference Include="Monopoly.Tests.Types.pas"/>
         <DCCReference Include="Monopoly.Tests.Utils.pas"/>
-        <DCCReference Include="helpers\Helpers.Monopoly.pas"/>
+        <DCCReference Include="helpers\Monopoly.Tests.Helpers.pas"/>
         <DCCReference Include="rules\Monopoly.Tests.Jail.pas"/>
         <DCCReference Include="rules\Monopoly.Tests.Landing.pas"/>
         <DCCReference Include="rules\Monopoly.Tests.Cards.pas"/>
         <DCCReference Include="..\src\Monopoly.Factories.pas"/>
-        <DCCReference Include="..\src\Monopoly.GameLoop.pas"/>
+        <DCCReference Include="..\src\Monopoly.GameStatus.pas"/>
         <DCCReference Include="..\src\Monopoly.Types.pas"/>
         <DCCReference Include="..\src\Monopoly.Utils.pas"/>
+        <DCCReference Include="..\src\Monopoly.CompositionRoot.pas"/>
         <DCCReference Include="..\src\Monopoly.Transactions.pas"/>
         <DCCReference Include="..\src\rules\Monopoly.Rules.Cards.pas"/>
         <DCCReference Include="..\src\rules\Monopoly.Rules.Jail.pas"/>
         <DCCReference Include="..\src\rules\Monopoly.Rules.Landing.pas"/>
         <DCCReference Include="..\src\rules\Monopoly.Rules.Rent.pas"/>
-        <DCCReference Include="..\src\rules\Monopoly.CardHandlers.pas"/>
-        <DCCReference Include="..\src\rules\Monopoly.LandingHandlers.pas"/>
-        <DCCReference Include="..\src\rules\Monopoly.RentHandlers.pas"/>
+        <DCCReference Include="Monopoly.Tests.Types.Deck.pas"/>
+        <DCCReference Include="Monopoly.Tests.Types.Game.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -148,7 +151,7 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="..\bin\Monopoly.Tests.exe" Configuration="Debug" Class="ProjectOutput">
+                <DeployFile LocalName="..\..\bin\Monopoly.Tests.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>Monopoly.Tests.exe</RemoteName>
                         <Overwrite>true</Overwrite>

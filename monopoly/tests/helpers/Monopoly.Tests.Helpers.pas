@@ -1,34 +1,46 @@
-unit Helpers.Monopoly;
+unit Monopoly.Tests.Helpers;
 
 interface
 
 uses
   System.SysUtils,
   System.Generics.Collections,
-  Monopoly.Types;
+  Monopoly.CompositionRoot,
+  Monopoly.Types,
+  Monopoly.Transactions;
 
-type
-  TGameHelper = class helper for TGame
-    procedure AddPlayers(const PlayerNames: array of string);
-    procedure FixedDiceRolls(const Rolls: array of TDiceRoll);
-    procedure SetDecks(
-      const ChanceCards: array of TMonopolyCard;
-      const CommunityChestCards: array of TMonopolyCard
-      );
-    class function CreateTest(): TGame; static;
-  end;
+const
+  MAX_ROUNDS = 5;
+
 type
   TPlayerHelper = class helper for TPlayer
     procedure AddProperites(
-      Board: TObjectList<TTile>;
+      Board: TBoard;
       const PropertyIds: array of Integer
     );
   end;
+
+function CreateTransactions :ITransactionService;
+function CreateMonopolyServices : IMonopolyServices;
+function CreateFixedDiceRoller(
+  const Rolls: array of TDiceRoll
+  ): TDiceRoller;
 
 implementation
 
 uses
   Monopoly.Factories;
+
+function CreateTransactions :ITransactionService;
+begin
+  Result := TTransactionService.Create;
+end;
+
+function CreateMonopolyServices : IMonopolyServices;
+begin
+  Result := CreateMonoployServices;
+end;
+
 
 { FixedDiceRoller }
 
@@ -60,51 +72,10 @@ begin
     end;
 end;
 
-{ TGameHelper }
-
-procedure TGameHelper.AddPlayers(const PlayerNames: array of string);
-begin
-  self.Players := CreatePlayers(PlayerNames);
-  if self.Players.Count > 0 then
-  begin
-    self.CurrentPlayerId := self.Players[0].Id;
-  end;
-end;
-
-procedure TGameHelper.SetDecks(
-  const ChanceCards: array of TMonopolyCard;
-  const CommunityChestCards: array of TMonopolyCard
-  );
-begin
-  if Assigned(self.Decks) then
-  begin
-    FreeAndNil(self.Decks);
-  end;
-
-  self.Decks := TDeckPair.Create(
-    TDeck.Create(ChanceCards),
-    TDeck.Create(CommunityChestCards)
-    );
-end;
-
-class function TGameHelper.CreateTest: TGame;
-begin
-  Result := TGame.Create(
-    CreatePlayers([]),
-    CreateBoard,
-    CreateDecks()
-  );
-end;
-
-procedure TGameHelper.FixedDiceRolls(const Rolls: array of TDiceRoll);
-begin
-  self.FDiceRoller := CreateFixedDiceRoller(Rolls);
-end;
-
 { TPlayerHelper }
 
 procedure TPlayerHelper.AddProperites(
-  Board: TObjectList<TTile>;
+  Board: TBoard;
   const PropertyIds: array of Integer
   );
 var

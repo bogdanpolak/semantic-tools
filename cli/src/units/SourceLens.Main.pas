@@ -14,9 +14,18 @@ implementation
 
 uses
   SourceLens.Types,
-  SourceLens.FileScanner,
+  SemanticTools.FileScanner,
+  SourceLens.ReportPrinter,
   SourceLens.DelphiAnalyzer,
-  SourceLens.ReportPrinter;
+  SemanticTools.DelphiAstParser;
+
+function CreateDelphiAnalyzer(): IDelphiAnalyzer;
+var
+  AstParser: IAstParser;
+begin
+  AstParser := CreateAstParser();
+  Result := TDelphiAnalyzer.Create(AstParser);
+end;
 
 procedure RunSourceLens();
 var
@@ -33,7 +42,7 @@ begin
     Files := TSourceFileScanner.CollectPasFiles(ScanFolder);
     WriteLn('Found .pas files: ', Length(Files));
 
-    AnalysisResult := DelphiAnalyzer.AnalyzeUnits(Files);
+    AnalysisResult := DelphiAnalyzer.AnalyzeRepository(Files);
 
     TReportPrinter.Print(AnalysisResult);
   except

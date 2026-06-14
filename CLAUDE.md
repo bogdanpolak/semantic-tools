@@ -6,10 +6,22 @@
     - `monopoly/src/MonopolyConsole.dpr` - Monopoly CLI the Monopoly simulation.
     - `monopoly/tests/Monopoly.Tests.dpr` - DUnitX Monopoly Test for Monoploy CLI.
 
+## Monopoly FMX
+
+- A simple FireMonkey application simulating a Monopoly game.
+- Used as a testbed for tooling and demonstrations (for example: `SourceLens`).
+
+Compile it from the repo root folder with:
+
+```bat
+dcc32 -E".\bin" -NU".\bin" -U".\monopoly\src;.\monopoly\src\rules" -Q .\monopoly\src\MonopolyFmx.dpr
+```
+
+This will produce `.\bin\MonopolyFmx.exe` This is an interactive FireMonkey Windows desktop application with limited ability  to control by AI agents. It is used to demonstrate the SourceLens analyzer and other tools.
 
 ## Monopoly Test workflow
 
-Run it formm the repo root folder
+Run it from the repo root folder
 
 ```bat
  dcc32 -E".\bin" -NU".\bin" -U".\monopoly\src;.\monopoly\src\rules;.\monopoly\tests\helpers;.\monopoly\tests;.\monopoly\tests\helpers\;.\monopoly\tests\rules" -Q .\monopoly\tests\Monopoly.Tests.dpr

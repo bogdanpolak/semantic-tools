@@ -13,7 +13,8 @@ type
   TTransactionServiceTests = class
   private
     FGame: TGame;
-    FTransactionService: ITransactionService;
+    FBoard: TBoard;
+    SUT: TTransactionService;
   public
     [Setup]
     procedure Setup;
@@ -21,100 +22,255 @@ type
     [TearDown]
     procedure TearDown;
 
+    { CollectFromBank }
+
     [Test]
-    procedure GetOwnerReturnsOwnerForCurrentTile;
+    procedure CollectFromBankCreditsAmount;
+
+    [Test]
+    procedure CollectFromBankIgnoresZeroAndNegativeAmounts;
+
+    [Test]
+    procedure CollectFromBankRaisesWhenPlayerIsMissing;
+
+    { ChargePlayer }
 
     [Test]
     procedure ChargePlayerBankruptsPlayerAndReleasesAssets;
 
     [Test]
-    procedure TransferMoneyBankruptsPayerAndTransfersAssetsToCreditor;
+    procedure ChargePlayerDeductsAmount;
+
+    [Test]
+    procedure ChargePlayerIgnoresZeroAndNegativeAmounts;
+
+    { MarkPlayerBankrupt }
 
     [Test]
     procedure MarkPlayerBankruptTransfersAssetsToCreditor;
+
+    [Test]
+    procedure MarkPlayerBankruptReleasesAssetsToBank;
+
+    { TransferMoney }
+
+    [Test]
+    procedure TransferMoneyBankruptsPayerAndTransfersAssetsToCreditor;
+
+    [Test]
+    procedure TransferMoneyTransfersPositiveAmount;
+
+    [Test]
+    procedure TransferMoneyIgnoresZeroAndNegativeAmounts;
+
+    [Test]
+    procedure TransferMoneyRaisesWhenFromPlayerIsMissing;
+
+    [Test]
+    procedure TransferMoneyRaisesWhenToPlayerIsMissing;
   end;
 
 implementation
 
 uses
-  Helpers.Monopoly;
+  Monopoly.Tests.Helpers;
 
 procedure TTransactionServiceTests.Setup;
 begin
-  FGame := TGame.CreateTest();
-  FTransactionService := CreateTransactionService;
+  FGame := TGame.Create();
+  FBoard := FGame.Board;
+  SUT := TTransactionService.Create;
 end;
 
 procedure TTransactionServiceTests.TearDown;
 begin
   FreeAndNil(FGame);
+  FreeAndNil(SUT);
+end;
+
+procedure TTransactionServiceTests.CollectFromBankCreditsAmount;
+var
+  AmountCollected: integer;
+begin
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
+  var Player := FGame.Players[0];
+
+  AmountCollected := SUT.CollectFromBank(Player, 200);
+
+  Assert.AreEqual(200, AmountCollected);
+  Assert.AreEqual(1700, Player.Money);
+  Assert.IsFalse(Player.IsBankrupt);
+end;
+
+procedure TTransactionServiceTests.CollectFromBankIgnoresZeroAndNegativeAmounts;
+begin
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
+  var Player := FGame.Players[0];
+
+  Assert.AreEqual(0, SUT.CollectFromBank(Player, 0));
+  Assert.AreEqual(1500, Player.Money);
+
+  Assert.AreEqual(0, SUT.CollectFromBank(Player, -10));
+  Assert.AreEqual(1500, Player.Money);
+end;
+
+procedure TTransactionServiceTests.CollectFromBankRaisesWhenPlayerIsMissing;
+begin
+  Assert.WillRaise(
+    procedure
+    begin
+      SUT.CollectFromBank(nil, 100);
+    end,
+    Exception
+  );
 end;
 
 procedure TTransactionServiceTests.ChargePlayerBankruptsPlayerAndReleasesAssets;
 var
   AmountCharged: integer;
 begin
-  FGame.AddPlayers(['Alice']);
-  FGame.Players[0].AddProperites(FGame.Board, [1]);
-  FGame.Players[0].Money := 40;
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
+  var player := FGame.Players[0];
+  player.AddProperites(FBoard, [1]);
+  player.Money := 40;
 
-  AmountCharged := FTransactionService.ChargePlayer(
-    FGame.Players[0],
-    50,
-    FGame.Board);
+  AmountCharged := SUT.ChargePlayer(player, 50, FBoard);
 
   Assert.AreEqual(40, AmountCharged);
-  Assert.AreEqual(0, FGame.Players[0].Money);
-  Assert.IsTrue(FGame.Players[0].IsBankrupt);
-  Assert.AreEqual(NO_OWNER_ID, FGame.Board[1].OwnerId);
+  Assert.AreEqual(0, player.Money);
+  Assert.IsTrue(player.IsBankrupt);
+  Assert.AreEqual(NO_OWNER_ID, FBoard[1].OwnerId);
 end;
 
-procedure TTransactionServiceTests.GetOwnerReturnsOwnerForCurrentTile;
+procedure TTransactionServiceTests.ChargePlayerDeductsAmount;
 var
-  Owner: TPlayer;
+  AmountCharged: integer;
 begin
-  FGame.AddPlayers(['Alice', 'Bob']);
-  FGame.Players[0].Position := 1;
-  FGame.Players[1].AddProperites(FGame.Board, [1]);
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
+  var player := FGame.Players[0];
 
-  Owner := FTransactionService.GetOwner(FGame);
+  AmountCharged := SUT.ChargePlayer(player, 200, FBoard);
 
-  Assert.IsNotNull(Owner);
-  Assert.AreEqual(FGame.Players[1].Id, Owner.Id);
+  Assert.AreEqual(200, AmountCharged);
+  Assert.AreEqual(1300, player.Money);
+  Assert.IsFalse(player.IsBankrupt);
 end;
+
+procedure TTransactionServiceTests.ChargePlayerIgnoresZeroAndNegativeAmounts;
+begin
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
+  var player := FGame.Players[0];
+
+  Assert.AreEqual(0, SUT.ChargePlayer(player, 0, FBoard));
+  Assert.AreEqual(1500, player.Money);
+
+  Assert.AreEqual(0, SUT.ChargePlayer(player, -10, FBoard));
+  Assert.AreEqual(1500, player.Money);
+end;
+
+{ MarkPlayerBankrupt }
 
 procedure TTransactionServiceTests.MarkPlayerBankruptTransfersAssetsToCreditor;
 begin
-  FGame.AddPlayers(['Alice', 'Bob']);
-  fGame.Players[0].AddProperites(FGame.Board, [1]);
-  FGame.Players[0].Money := 25;
+  FGame.StartGame(['Alice', 'Bob'], MAX_ROUNDS);
+  var Alice := FGame.Players[0];
+  var Bob :=  FGame.Players[1];
+  Alice.AddProperites(FGame.Board, [1]);
+  Alice.Money := 25;
 
-  FTransactionService.MarkPlayerBankrupt(FGame.Players[0], FGame.Board, FGame.Players[1]);
+  SUT.MarkPlayerBankrupt(Alice, FBoard, Bob);
 
-  Assert.IsTrue(FGame.Players[0].IsBankrupt);
-  Assert.AreEqual(1525, FGame.Players[1].Money);
-  Assert.AreEqual(FGame.Players[1].Id, FGame.Board[1].OwnerId);
+  Assert.IsTrue(Alice.IsBankrupt);
+  Assert.AreEqual(1525, Bob.Money);
+  Assert.AreEqual(Bob.Id, FBoard[1].OwnerId);
 end;
+
+procedure TTransactionServiceTests.MarkPlayerBankruptReleasesAssetsToBank;
+begin
+  FGame.StartGame(['Alice', 'Bob'], MAX_ROUNDS);
+  var Alice := FGame.Players[0];
+  Alice.AddProperites(FBoard, [1]);
+  Alice.Money := 25;
+
+  SUT.MarkPlayerBankrupt(Alice, FGame.Board);
+
+  Assert.IsTrue(Alice.IsBankrupt);
+  Assert.AreEqual(0, Alice.Money);
+  Assert.AreEqual(0, Alice.PropertyIds.Count);
+  Assert.AreEqual(NO_OWNER_ID, FBoard[1].OwnerId);
+end;
+
+{ TransferMoney }
 
 procedure TTransactionServiceTests.TransferMoneyBankruptsPayerAndTransfersAssetsToCreditor;
 var
   AmountTransferred: integer;
 begin
-  FGame.AddPlayers(['Alice', 'Bob']);
-  FGame.Players[0].AddProperites(FGame.Board, [1]);
-  FGame.Players[0].Money := 40;
+  FGame.StartGame(['Alice', 'Bob'], MAX_ROUNDS);
+  var Alice := FGame.Players[0];
+  var Bob :=  FGame.Players[1];
+  Alice.AddProperites(FGame.Board, [1]);
+  Alice.Money := 40;
 
-  AmountTransferred := FTransactionService.TransferMoney(
-    FGame.Players[0],
-    FGame.Players[1],
-    50,
-    FGame.Board
-  );
+  AmountTransferred := SUT.TransferMoney(Alice, Bob, 50, FBoard );
 
   Assert.AreEqual(40, AmountTransferred);
-  Assert.AreEqual(0, FGame.Players[0].Money);
-  Assert.IsTrue(FGame.Players[0].IsBankrupt);
-  Assert.AreEqual(FGame.Players[1].Id, FGame.Board[1].OwnerId);
+  Assert.AreEqual(0, Alice.Money);
+  Assert.AreEqual(1540, Bob.Money);
+  Assert.IsTrue(Alice.IsBankrupt);
+  Assert.AreEqual(Bob.Id, FBoard[1].OwnerId);
+  Assert.AreEqual(1, Bob.PropertyIds[0]);
+end;
+
+procedure TTransactionServiceTests.TransferMoneyIgnoresZeroAndNegativeAmounts;
+begin
+  FGame.StartGame(['Alice', 'Bob'], MAX_ROUNDS);
+  Assert.AreEqual(0, SUT.TransferMoney(FGame.Players[0], FGame.Players[1], 0, FGame.Board));
+  Assert.AreEqual(1500, FGame.Players[0].Money);
+  Assert.AreEqual(1500, FGame.Players[1].Money);
+
+  Assert.AreEqual(0, SUT.TransferMoney(FGame.Players[0], FGame.Players[1], -50, FGame.Board));
+  Assert.AreEqual(1500, FGame.Players[0].Money);
+  Assert.AreEqual(1500, FGame.Players[1].Money);
+end;
+
+procedure TTransactionServiceTests.TransferMoneyRaisesWhenFromPlayerIsMissing;
+begin
+  FGame.StartGame(['Alice', 'Bob'], MAX_ROUNDS);
+  Assert.WillRaise(
+    procedure
+    begin
+      SUT.TransferMoney(nil, FGame.Players[1], 100, FBoard);
+    end,
+    Exception
+  );
+end;
+
+procedure TTransactionServiceTests.TransferMoneyRaisesWhenToPlayerIsMissing;
+begin
+  FGame.StartGame(['Alice', 'Bob'], MAX_ROUNDS);
+  Assert.WillRaise(
+    procedure
+    begin
+      SUT.TransferMoney(FGame.Players[0], nil, 100, FBoard);
+    end,
+    Exception
+  );
+end;
+
+procedure TTransactionServiceTests.TransferMoneyTransfersPositiveAmount;
+var
+  AmountTransferred: integer;
+begin
+  FGame.StartGame(['Alice', 'Bob'], MAX_ROUNDS);
+  var Alice := FGame.Players[0];
+  var Bob :=  FGame.Players[1];
+
+  AmountTransferred := SUT.TransferMoney(Alice, Bob, 200, FBoard);
+
+  Assert.AreEqual(200, AmountTransferred);
+  Assert.AreEqual(1300, Alice.Money);
+  Assert.AreEqual(1700, Bob.Money);
 end;
 
 initialization

@@ -5,13 +5,15 @@ interface
 uses
   System.SysUtils,
   DUnitX.TestFramework,
-  Monopoly.Types;
+  Monopoly.Types,
+  Monopoly.Transactions;
 
 type
   [TestFixture]
   TJailRulesTests = class
   private
     FGame: TGame;
+    FTransations : ITransactionService;
   public
     [Setup]
     procedure Setup;
@@ -36,18 +38,18 @@ implementation
 
 uses
   Monopoly.Rules.Jail,
-  Helpers.Monopoly;
+  Monopoly.Tests.Helpers;
 
 procedure TJailRulesTests.JailRulesKeepsPlayerInJailAfterFailedRoll;
 var
   ResultInfo: TJailResult;
 begin
-  FGame.AddPlayers(['Alice']);
-  FGame.FixedDiceRolls([TDiceRoll.Create(2, 3)]);
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
+  FGame.DiceRoller := CreateFixedDiceRoller([TDiceRoll.Create(2, 3)]);
   FGame.Players[0].IsInJail := True;
   FGame.Players[0].Money := 30;
 
-  ResultInfo := JailRules(FGame);
+  ResultInfo := JailRules(FGame, FTransations);
 
   Assert.IsFalse(ResultInfo.CanMove);
   Assert.IsTrue(ResultInfo.HasRoll);
@@ -61,14 +63,14 @@ procedure TJailRulesTests.JailRulesMarksPlayerBankruptAfterThirdFailedRollWithou
 var
   ResultInfo: TJailResult;
 begin
-  FGame.AddPlayers(['Alice']);
-  FGame.FixedDiceRolls([TDiceRoll.Create(2, 3)]);
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
+  FGame.DiceRoller := CreateFixedDiceRoller([TDiceRoll.Create(2, 3)]);
   FGame.Players[0].IsInJail := True;
   FGame.Players[0].Money := 30;
   FGame.Players[0].FailedJailRolls := 2;
   FGame.Players[0].AddProperites(FGame.Board, [1]);
 
-  ResultInfo := JailRules(FGame);
+  ResultInfo := JailRules(FGame, FTransations);
 
   Assert.IsFalse(ResultInfo.CanMove);
   Assert.IsFalse(ResultInfo.HasRoll);
@@ -83,10 +85,10 @@ procedure TJailRulesTests.JailRulesPaysFineWhenPlayerCanAffordIt;
 var
   ResultInfo: TJailResult;
 begin
-  FGame.AddPlayers(['Alice']);
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
   FGame.Players[0].IsInJail := True;
 
-  ResultInfo := JailRules(FGame);
+  ResultInfo := JailRules(FGame, FTransations);
 
   Assert.IsTrue(ResultInfo.CanMove);
   Assert.IsFalse(ResultInfo.HasRoll);
@@ -99,12 +101,12 @@ procedure TJailRulesTests.JailRulesReleasesPlayerOnDoubles;
 var
   ResultInfo: TJailResult;
 begin
-  FGame.AddPlayers(['Alice']);
-  FGame.FixedDiceRolls([TDiceRoll.Create(4, 4)]);
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
+  FGame.DiceRoller := CreateFixedDiceRoller([TDiceRoll.Create(4, 4)]);
   FGame.Players[0].IsInJail := True;
   FGame.Players[0].Money := 30;
 
-  ResultInfo := JailRules(FGame);
+  ResultInfo := JailRules(FGame, FTransations);
 
   Assert.IsTrue(ResultInfo.CanMove);
   Assert.IsTrue(ResultInfo.HasRoll);
@@ -117,7 +119,8 @@ end;
 
 procedure TJailRulesTests.Setup;
 begin
-  FGame := TGame.CreateTest();
+  FGame := TGame.Create();
+  FTransations := CreateTransactions();
 end;
 
 procedure TJailRulesTests.TearDown;

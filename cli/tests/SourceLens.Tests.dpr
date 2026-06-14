@@ -15,11 +15,10 @@ uses
   DUnitX.TestFramework,
   Tests.SourceLens.DelphiAnalyzer in 'Tests.SourceLens.DelphiAnalyzer.pas',
   Tests.SourceLens.Utils in 'Tests.SourceLens.Utils.pas',
+  SemanticTools.DelphiAstParser in '..\src\units\SemanticTools.DelphiAstParser.pas',
+  SemanticTools.Utils in '..\src\units\SemanticTools.Utils.pas',
   SourceLens.DelphiAnalyzer in '..\src\units\SourceLens.DelphiAnalyzer.pas',
-  SourceLens.Extractor.PublicMethods in '..\src\units\SourceLens.Extractor.PublicMethods.pas',
-  SourceLens.ParserEnvironment in '..\src\units\SourceLens.ParserEnvironment.pas',
-  SourceLens.Types in '..\src\units\SourceLens.Types.pas',
-  SourceLens.Utils in '..\src\units\SourceLens.Utils.pas';
+  SourceLens.Types in '..\src\units\SourceLens.Types.pas';
 
 {$IFNDEF TESTINSIGHT}
 var

@@ -1,0 +1,252 @@
+object Form1: TForm1
+  Left = 0
+  Top = 0
+  ActiveControl = btnPlayTurn
+  Caption = 'Form1'
+  ClientHeight = 456
+  ClientWidth = 812
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnCreate = FormCreate
+  DesignerMasterStyle = 0
+  object Panel1: TPanel
+    Align = Right
+    Padding.Left = 4.000000000000000000
+    Padding.Top = 4.000000000000000000
+    Padding.Right = 4.000000000000000000
+    Padding.Bottom = 4.000000000000000000
+    Margins.Left = 4.000000000000000000
+    Margins.Top = 4.000000000000000000
+    Margins.Right = 4.000000000000000000
+    Margins.Bottom = 4.000000000000000000
+    Position.X = 648.000000000000000000
+    Position.Y = 4.000000000000000000
+    Size.Width = 160.000000000000000000
+    Size.Height = 448.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 0
+    object GroupBox1: TGroupBox
+      Align = Top
+      Padding.Left = 8.000000000000000000
+      Padding.Top = 20.000000000000000000
+      Padding.Right = 8.000000000000000000
+      Padding.Bottom = 4.000000000000000000
+      Margins.Left = 4.000000000000000000
+      Margins.Top = 4.000000000000000000
+      Margins.Right = 4.000000000000000000
+      Margins.Bottom = 4.000000000000000000
+      Position.X = 8.000000000000000000
+      Position.Y = 8.000000000000000000
+      Size.Width = 144.000000000000000000
+      Size.Height = 81.000000000000000000
+      Size.PlatformDefault = False
+      Text = 'Game Status'
+      TabOrder = 1
+      object lblGameTurns: TLabel
+        Align = Top
+        Position.X = 8.000000000000000000
+        Position.Y = 20.000000000000000000
+        Size.Width = 128.000000000000000000
+        Size.Height = 17.000000000000000000
+        Size.PlatformDefault = False
+        Text = 'lblGameTurns'
+        TabOrder = 38
+      end
+      object lblGameRounds: TLabel
+        Align = Top
+        Margins.Top = 10.000000000000000000
+        Position.X = 8.000000000000000000
+        Position.Y = 47.000000000000000000
+        Size.Width = 128.000000000000000000
+        Size.Height = 17.000000000000000000
+        Size.PlatformDefault = False
+        Text = 'lblGameRounds'
+        TabOrder = 39
+      end
+    end
+    object btnPlayTurn: TButton
+      Align = Top
+      Position.X = 4.000000000000000000
+      Position.Y = 93.000000000000000000
+      Size.Width = 152.000000000000000000
+      Size.Height = 22.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 0
+      Text = 'Play Single Turn'
+      OnClick = btnPlayTurnClick
+    end
+    object Rectangle1: TRectangle
+      Align = Top
+      Margins.Top = 15.000000000000000000
+      Margins.Bottom = 8.000000000000000000
+      Position.X = 4.000000000000000000
+      Position.Y = 130.000000000000000000
+      Size.Width = 152.000000000000000000
+      Size.Height = 28.000000000000000000
+      Size.PlatformDefault = False
+      Stroke.Thickness = 0.000000000000000000
+    end
+    object sbtnMaxTurns: TSpinBox
+      Touch.InteractiveGestures = [LongTap, DoubleTap]
+      Align = Top
+      TabOrder = 3
+      Cursor = crIBeam
+      Value = 60.000000000000000000
+      Position.X = 4.000000000000000000
+      Position.Y = 166.000000000000000000
+      Size.Width = 152.000000000000000000
+      Size.Height = 22.000000000000000000
+      Size.PlatformDefault = False
+    end
+    object btnPlayGame: TButton
+      Align = Top
+      Margins.Top = 8.000000000000000000
+      Position.X = 4.000000000000000000
+      Position.Y = 196.000000000000000000
+      Size.Width = 152.000000000000000000
+      Size.Height = 22.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 4
+      Text = 'Play Game'
+    end
+  end
+  object TabControl1: TTabControl
+    Margins.Left = 4.000000000000000000
+    Margins.Top = 4.000000000000000000
+    Margins.Right = 4.000000000000000000
+    Margins.Bottom = 4.000000000000000000
+    Position.X = 4.000000000000000000
+    Position.Y = 4.000000000000000000
+    Size.Width = 565.000000000000000000
+    Size.Height = 381.000000000000000000
+    Size.PlatformDefault = False
+    TabIndex = 0
+    TabOrder = 1
+    TabPosition = PlatformDefault
+    Sizes = (
+      565s
+      355s
+      565s
+      355s)
+    object TabItem1: TTabItem
+      CustomIcon = <
+        item
+        end>
+      IsSelected = True
+      Size.Width = 74.000000000000000000
+      Size.Height = 26.000000000000000000
+      Size.PlatformDefault = False
+      StyleLookup = ''
+      TabOrder = 0
+      Text = 'Game Log'
+      ExplicitSize.cx = 74.000000000000000000
+      ExplicitSize.cy = 26.000000000000000000
+      object Memo1: TMemo
+        Touch.InteractiveGestures = [Pan, LongTap, DoubleTap]
+        DataDetectorTypes = []
+        StyledSettings = [Size, Style, FontColor]
+        TextSettings.Font.Family = 'Consolas'
+        Margins.Left = 4.000000000000000000
+        Margins.Top = 4.000000000000000000
+        Margins.Right = 4.000000000000000000
+        Margins.Bottom = 4.000000000000000000
+        Position.X = 4.000000000000000000
+        Position.Y = 4.000000000000000000
+        Size.Width = 413.000000000000000000
+        Size.Height = 237.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 0
+        Viewport.Width = 409.000000000000000000
+        Viewport.Height = 233.000000000000000000
+      end
+    end
+    object TabItem2: TTabItem
+      CustomIcon = <
+        item
+        end>
+      IsSelected = False
+      Size.Width = 92.000000000000000000
+      Size.Height = 26.000000000000000000
+      Size.PlatformDefault = False
+      StyleLookup = ''
+      TabOrder = 0
+      Text = 'Game Results'
+      ExplicitSize.cx = 92.000000000000000000
+      ExplicitSize.cy = 26.000000000000000000
+      object StringGrid1: TStringGrid
+        CanFocus = True
+        ClipChildren = True
+        Margins.Left = 4.000000000000000000
+        Margins.Top = 4.000000000000000000
+        Margins.Right = 4.000000000000000000
+        Margins.Bottom = 4.000000000000000000
+        Position.X = 4.000000000000000000
+        Position.Y = 57.000000000000000000
+        Size.Width = 493.000000000000000000
+        Size.Height = 192.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 0
+        Viewport.Width = 489.000000000000000000
+        Viewport.Height = 167.000000000000000000
+      end
+      object Panel2: TPanel
+        Align = MostTop
+        Padding.Left = 12.000000000000000000
+        Padding.Top = 12.000000000000000000
+        Padding.Right = 12.000000000000000000
+        Padding.Bottom = 12.000000000000000000
+        Margins.Left = 4.000000000000000000
+        Margins.Top = 4.000000000000000000
+        Margins.Right = 4.000000000000000000
+        Margins.Bottom = 4.000000000000000000
+        Position.X = 4.000000000000000000
+        Position.Y = 4.000000000000000000
+        Size.Width = 557.000000000000000000
+        Size.Height = 45.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 1
+        object Label1: TLabel
+          Align = Left
+          Position.X = 12.000000000000000000
+          Position.Y = 12.000000000000000000
+          Size.Width = 40.000000000000000000
+          Size.Height = 21.000000000000000000
+          Size.PlatformDefault = False
+          Text = 'Turns:'
+          TabOrder = 0
+        end
+        object lblTurns: TLabel
+          Align = Left
+          Position.X = 52.000000000000000000
+          Position.Y = 12.000000000000000000
+          Size.Width = 60.000000000000000000
+          Size.Height = 21.000000000000000000
+          Size.PlatformDefault = False
+          Text = 'lblTurns'
+          TabOrder = 1
+        end
+        object Label2: TLabel
+          Align = Left
+          Position.X = 112.000000000000000000
+          Position.Y = 12.000000000000000000
+          Size.Width = 60.000000000000000000
+          Size.Height = 21.000000000000000000
+          Size.PlatformDefault = False
+          Text = 'Rounds:'
+          TabOrder = 3
+        end
+        object lblRounds: TLabel
+          Align = Left
+          Position.X = 172.000000000000000000
+          Position.Y = 12.000000000000000000
+          Size.Width = 60.000000000000000000
+          Size.Height = 21.000000000000000000
+          Size.PlatformDefault = False
+          Text = 'lblRounds'
+          TabOrder = 4
+        end
+      end
+    end
+  end
+end

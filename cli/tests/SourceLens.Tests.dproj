@@ -84,11 +84,10 @@
         </DelphiCompile>
         <DCCReference Include="Tests.SourceLens.DelphiAnalyzer.pas"/>
         <DCCReference Include="Tests.SourceLens.Utils.pas"/>
+        <DCCReference Include="..\src\units\SemanticTools.DelphiAstParser.pas"/>
+        <DCCReference Include="..\src\units\SemanticTools.Utils.pas"/>
         <DCCReference Include="..\src\units\SourceLens.DelphiAnalyzer.pas"/>
-        <DCCReference Include="..\src\units\SourceLens.Extractor.PublicMethods.pas"/>
-        <DCCReference Include="..\src\units\SourceLens.ParserEnvironment.pas"/>
         <DCCReference Include="..\src\units\SourceLens.Types.pas"/>
-        <DCCReference Include="..\src\units\SourceLens.Utils.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -135,7 +134,7 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="..\bin\SourceLens.Tests.exe" Configuration="Debug" Class="ProjectOutput">
+                <DeployFile LocalName="..\..\bin\SourceLens.Tests.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>SourceLens.Tests.exe</RemoteName>
                         <Overwrite>true</Overwrite>

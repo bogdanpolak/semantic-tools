@@ -47,13 +47,10 @@ type
     procedure CurrentPlayerReturnsMatchingPlayer;
 
     [Test]
-    procedure CurrentTileOwnerReturnsNilWhenTileIsUnowned;
+    procedure CurrentPlayerTileOwnerReturnsNilWhenTileIsUnowned;
 
     [Test]
-    procedure CurrentTileOwnerReturnsOwnerWhenTileIsOwned;
-
-    [Test]
-    procedure CurrentPlayerReturnsNilForUnknownId;
+    procedure CurrentPlayerTileOwnerReturnsOwnerWhenTileIsOwned;
 
     [Test]
     procedure NextActivePlayerStartsAtFirstActivePlayerWhenUnset;
@@ -62,16 +59,13 @@ type
     procedure NextActivePlayerSkipsBankruptPlayers;
 
     [Test]
-    procedure NextActivePlayerReturnsNilWhenAllPlayersAreBankrupt;
+    procedure TileAtPlayerPositionReturnsTileAtPlayerPosition;
 
     [Test]
-    procedure GetPlayerTileReturnsTileAtPlayerPosition;
+    procedure OwnerOfTileReturnsOwnerForOwnedTile;
 
     [Test]
-    procedure GetTileOwnerReturnsOwnerForOwnedTile;
-
-    [Test]
-    procedure GetTileOwnerReturnsNilForUnownedTile;
+    procedure OwnerOfTileReturnsNilForUnownedTile;
 
     [Test]
     procedure TileOwnershipHelpersReflectOwnerState;
@@ -80,10 +74,10 @@ type
     procedure TransferTileToMovesOwnershipAndPropertyTracking;
 
     [Test]
-    procedure GetPlayerTileRaisesWhenPlayerIsMissing;
+    procedure TileAtPlayerPositionRaisesWhenPlayerIsMissing;
 
     [Test]
-    procedure GetPlayerTileRaisesWhenPositionIsInvalid;
+    procedure TileAtPlayerPositionRaisesWhenPositionIsInvalid;
 
     [Test]
     procedure RollDiceUsesInjectedDiceRoller;
@@ -102,11 +96,11 @@ implementation
 
 uses
   Monopoly.Factories,
-  Helpers.Monopoly;
+  Monopoly.Tests.Helpers;
 
 procedure TTypeTests.AcquireTileAssignsOwnerAndTracksPropertyId;
 begin
-  FGame.AddPlayers(['Alice']);
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
   FGame.Players[0].AcquireTile(FGame.Board[1]);
 
   Assert.AreEqual(FGame.Players[0].Id, fGame.Board[1].OwnerId);
@@ -115,16 +109,16 @@ end;
 
 procedure TTypeTests.AdjustPlayerMoneyAppliesPositiveAndNegativeChanges;
 begin
-  FGame.AddPlayers(['Alice']);
-  FGame.AdjustPlayerMoney(FGame.Players[0], 25);
-  FGame.AdjustPlayerMoney(FGame.Players[0], -10);
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
+  FGame.PayBank(FGame.Players[0], 15);
+  FGame.PayBank(FGame.Players[0], 10);
 
-  Assert.AreEqual(1515, FGame.Players[0].Money);
+  Assert.AreEqual(1475, FGame.Players[0].Money);
 end;
 
 procedure TTypeTests.CanAffordReturnsFalseWhenAmountExceedsMoney;
 begin
-  FGame.AddPlayers(['Alice']);
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
   FGame.Players[0].Money := 50;
 
   Assert.IsFalse(FGame.Players[0].CanAfford(60));
@@ -132,7 +126,7 @@ end;
 
 procedure TTypeTests.CanAffordReturnsTrueWhenAmountFitsMoney;
 begin
-  FGame.AddPlayers(['Alice']);
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
   FGame.Players[0].Money := 50;
 
   Assert.IsTrue(FGame.Players[0].CanAfford(50));
@@ -141,7 +135,7 @@ end;
 
 procedure TTypeTests.CountActivePlayersIgnoresBankruptPlayers;
 begin
-  FGame.AddPlayers(['Alice', 'Bob', 'Charlie']);
+  FGame.StartGame(['Alice', 'Bob', 'Charlie'], MAX_ROUNDS);
   FGame.Players[1].IsBankrupt := True;
 
   Assert.AreEqual(2, FGame.CountActivePlayers);
@@ -149,7 +143,7 @@ end;
 
 procedure TTypeTests.CountOwnedTilesOfTypeCountsOnlyMatchingOwnedTiles;
 begin
-  FGame.AddPlayers(['Alice', 'Bob']);
+  FGame.StartGame(['Alice', 'Bob'], MAX_ROUNDS);
   FGame.Players[0].AddProperites(FGame.Board, [5, 15, 28]);
 
   Assert.AreEqual(2, FGame.CountOwnedTilesOfType(FGame.Players[0], ttRailroad));
@@ -158,7 +152,7 @@ end;
 
 procedure TTypeTests.CountOwnedTilesOfTypeRaisesForUnsupportedTileType;
 begin
-  FGame.AddPlayers(['Alice']);
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
   Assert.WillRaise(
     procedure
     begin
@@ -170,7 +164,7 @@ end;
 
 procedure TTypeTests.CountOwnedTilesOfTypeReturnsZeroForMissingOwner;
 begin
-  FGame.AddPlayers(['Alice']);
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
 
   Assert.AreEqual(0, FGame.CountOwnedTilesOfType(nil, ttRailroad));
 end;
@@ -179,8 +173,8 @@ procedure TTypeTests.CurrentPlayerReturnsMatchingPlayer;
 var
   Player: TPlayer;
 begin
-  FGame.AddPlayers(['Alice', 'Bob']);
-  FGame.CurrentPlayerId := 2;
+  FGame.StartGame(['Alice', 'Bob'], MAX_ROUNDS);
+  FGame.NextTurn;
 
   Player := FGame.CurrentPlayer;
 
@@ -188,34 +182,26 @@ begin
   Assert.AreEqual('Bob', Player.Name);
 end;
 
-procedure TTypeTests.CurrentTileOwnerReturnsNilWhenTileIsUnowned;
+procedure TTypeTests.CurrentPlayerTileOwnerReturnsNilWhenTileIsUnowned;
 begin
-  FGame.AddPlayers(['Alice', 'Bob']);
+  FGame.StartGame(['Alice', 'Bob'], MAX_ROUNDS);
     FGame.Players[0].Position := 1;
 
-  Assert.IsTrue( FGame.CurrentTileOwner = nil);
+  Assert.IsTrue(FGame.CurrentPlayerTileOwner = nil);
 end;
 
-procedure TTypeTests.CurrentTileOwnerReturnsOwnerWhenTileIsOwned;
+procedure TTypeTests.CurrentPlayerTileOwnerReturnsOwnerWhenTileIsOwned;
 var
   Owner: TPlayer;
 begin
-  FGame.AddPlayers(['Alice', 'Bob']);
+  FGame.StartGame(['Alice', 'Bob'], MAX_ROUNDS);
   FGame.Players[0].Position := 1;
   FGame.Players[1].AcquireTile( FGame.Board[1]);
 
-  Owner := FGame.CurrentTileOwner;
+  Owner := FGame.CurrentPlayerTileOwner;
 
   Assert.IsNotNull(Owner);
   Assert.AreEqual( FGame.Players[1].Id, Owner.Id);
-end;
-
-procedure TTypeTests.CurrentPlayerReturnsNilForUnknownId;
-begin
-  FGame.AddPlayers(['Alice']);
-  FGame.CurrentPlayerId := 999;
-
-  Assert.IsTrue( FGame.CurrentPlayer = nil);
 end;
 
 procedure TTypeTests.DeckDrawReturnAndReshuffleRecycleDiscardedCards;
@@ -229,12 +215,7 @@ begin
     [
       TMonopolyCard.Create(ctCollect, 'Collect $50', 50),
       TMonopolyCard.Create(ctPay, 'Pay $15', 15)
-    ],
-    function(MaxExclusive: integer): integer
-    begin
-      Result := MaxExclusive - 1;
-    end
-  );
+    ]);
   try
     FirstCard := Deck.DrawCard;
     SecondCard := Deck.DrawCard;
@@ -258,40 +239,40 @@ begin
   end;
 end;
 
-procedure TTypeTests.GetPlayerTileRaisesWhenPlayerIsMissing;
+procedure TTypeTests.TileAtPlayerPositionRaisesWhenPlayerIsMissing;
 begin
-  FGame.AddPlayers(['Alice']);
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
   Assert.WillRaise(
     procedure
     begin
-      FGame.GetPlayerTile(nil);
+      FGame.TileAtPlayerPosition(nil);
     end,
     Exception
   );
 end;
 
-procedure TTypeTests.GetPlayerTileRaisesWhenPositionIsInvalid;
+procedure TTypeTests.TileAtPlayerPositionRaisesWhenPositionIsInvalid;
 begin
-  FGame.AddPlayers(['Alice']);
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
   FGame.Players[0].Position := FGame.Board.Count;
 
   Assert.WillRaise(
     procedure
     begin
-      FGame.GetPlayerTile( FGame.Players[0]);
+      FGame.TileAtPlayerPosition(FGame.Players[0]);
     end,
     Exception
   );
 end;
 
-procedure TTypeTests.GetPlayerTileReturnsTileAtPlayerPosition;
+procedure TTypeTests.TileAtPlayerPositionReturnsTileAtPlayerPosition;
 var
   Tile: TTile;
 begin
-  FGame.AddPlayers(['Alice']);
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
   FGame.Players[0].Position := 12;
 
-  Tile := FGame.GetPlayerTile( FGame.Players[0]);
+  Tile := FGame.TileAtPlayerPosition(FGame.Players[0]);
 
   Assert.AreEqual('Electric Company', Tile.Name);
   Assert.AreEqual(ttUtility, Tile.TileType);
@@ -301,7 +282,7 @@ procedure TTypeTests.MovePlayerByWrapsAndReportsPassingStart;
 var
   PassedStart: boolean;
 begin
-  FGame.AddPlayers(['Alice']);
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
   FGame.Players[0].Position := 39;
 
   PassedStart := FGame.MovePlayerBy( FGame.Players[0], 3);
@@ -312,26 +293,26 @@ end;
 
 procedure TTypeTests.MovePlayerToSetsExactPosition;
 begin
-  FGame.AddPlayers(['Alice']);
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
   FGame.MovePlayerTo( FGame.Players[0], 12);
 
   Assert.AreEqual(12, FGame.Players[0].Position);
 end;
 
-procedure TTypeTests.GetTileOwnerReturnsNilForUnownedTile;
+procedure TTypeTests.OwnerOfTileReturnsNilForUnownedTile;
 begin
-  FGame.AddPlayers(['Alice', 'Bob']);
-  Assert.IsTrue( FGame.GetTileOwner( FGame.Board[1]) = nil);
+  FGame.StartGame(['Alice', 'Bob'], MAX_ROUNDS);
+  Assert.IsTrue(FGame.OwnerOfTile(FGame.Board[1]) = nil);
 end;
 
-procedure TTypeTests.GetTileOwnerReturnsOwnerForOwnedTile;
+procedure TTypeTests.OwnerOfTileReturnsOwnerForOwnedTile;
 var
   Owner: TPlayer;
 begin
-  FGame.AddPlayers(['Alice', 'Bob']);
+  FGame.StartGame(['Alice', 'Bob'], MAX_ROUNDS);
   FGame.Players[1].AcquireTile( FGame.Board[1]);
 
-  Owner := FGame.GetTileOwner( FGame.Board[1]);
+  Owner := FGame.OwnerOfTile(FGame.Board[1]);
 
   Assert.IsNotNull(Owner);
   Assert.AreEqual( FGame.Players[1].Id, Owner.Id);
@@ -341,7 +322,7 @@ procedure TTypeTests.TileOwnershipHelpersReflectOwnerState;
 var
   Tile: TTile;
 begin
-  FGame.AddPlayers(['Alice', 'Bob']);
+  FGame.StartGame(['Alice', 'Bob'], MAX_ROUNDS);
   Tile := FGame.Board[1];
   Assert.IsFalse(Tile.IsOwned);
   Assert.IsFalse(Tile.IsOwnedBy( FGame.Players[0]));
@@ -357,7 +338,7 @@ procedure TTypeTests.TransferTileToMovesOwnershipAndPropertyTracking;
 var
   Tile: TTile;
 begin
-  FGame.AddPlayers(['Alice', 'Bob']);
+  FGame.StartGame(['Alice', 'Bob'], MAX_ROUNDS);
   Tile := FGame.Board[1];
   FGame.Players[0].AcquireTile(Tile);
 
@@ -368,51 +349,37 @@ begin
   Assert.AreEqual( FGame.Players[1].Id, Tile.OwnerId);
 end;
 
-procedure TTypeTests.NextActivePlayerReturnsNilWhenAllPlayersAreBankrupt;
-begin
-  FGame.AddPlayers(['Alice', 'Bob']);
-  FGame.Players[0].IsBankrupt := True;
-  FGame.Players[1].IsBankrupt := True;
-
-  Assert.IsTrue( FGame.NextActivePlayer = nil);
-  Assert.AreEqual(0, FGame.CurrentPlayerId);
-end;
-
 procedure TTypeTests.NextActivePlayerSkipsBankruptPlayers;
-var
-  NextPlayer: TPlayer;
 begin
-  FGame.AddPlayers(['Alice', 'Bob', 'Charlie']);
+  FGame.StartGame(['Alice', 'Bob', 'Charlie'], MAX_ROUNDS);
   FGame.Players[1].IsBankrupt := True;
 
-  NextPlayer := FGame.NextActivePlayer;
+  FGame.NextTurn;
 
-  Assert.IsNotNull(NextPlayer);
-  Assert.AreEqual('Charlie', NextPlayer.Name);
+  var Player := FGame.CurrentPlayer;
+  Assert.AreEqual('Charlie', Player.Name);
   Assert.AreEqual( FGame.Players[2].Id, FGame.CurrentPlayerId);
 end;
 
 procedure TTypeTests.NextActivePlayerStartsAtFirstActivePlayerWhenUnset;
-var
-  NextPlayer: TPlayer;
 begin
-  FGame.AddPlayers(['Alice', 'Bob']);
-  FGame.CurrentPlayerId := 0;
+  FGame.StartGame(['Alice', 'Bob'], MAX_ROUNDS);
   FGame.Players[0].IsBankrupt := True;
 
-  NextPlayer := FGame.NextActivePlayer;
+  var IsOK := FGame.NextTurn;
 
-  Assert.IsNotNull(NextPlayer);
-  Assert.AreEqual('Bob', NextPlayer.Name);
-  Assert.AreEqual( FGame.Players[1].Id, FGame.CurrentPlayerId);
+  Assert.IsFalse(IsOK);
+  Assert.AreEqual('Bob wins the game.', FGame.TermiantionReason);
+  Assert.AreEqual('Bob', FGame.Players[1].Name);
+  Assert.isFalse( FGame.IsGameActive);
 end;
 
 procedure TTypeTests.RollDiceUsesInjectedDiceRoller;
 var
   Roll: TDiceRoll;
 begin
-  FGame.AddPlayers(['Alice']);
-  FGame.FixedDiceRolls([TDiceRoll.Create(4, 5)]);
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
+  FGame.DiceRoller := CreateFixedDiceRoller([TDiceRoll.Create(4, 5)]);
   Roll := FGame.RollDice;
 
   Assert.AreEqual(4, Roll.Dice1);
@@ -423,7 +390,7 @@ end;
 
 procedure TTypeTests.Setup;
 begin
-  FGame := TGame.CreateTest();
+  FGame := TGame.Create();
 end;
 
 procedure TTypeTests.TearDown;

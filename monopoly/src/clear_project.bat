@@ -1,7 +1,7 @@
 rmdir /Q /S __history
 rmdir /Q /S __recovery
-rmdir /Q /S rules/__history
-rmdir /Q /S rules/__recovery
+rmdir /Q /S rules\__history
+rmdir /Q /S rules\__recovery
 
 rmdir /Q /S bin
 

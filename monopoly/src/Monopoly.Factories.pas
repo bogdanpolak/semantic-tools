@@ -6,19 +6,14 @@ uses
   System.Generics.Collections,
   Monopoly.Types;
 
-function CreateBoard: TObjectList<TTile>;
-function CreatePlayers(const Names: array of string): TObjectList<TPlayer>;
-function CreateDecks(ARandomIndex: TRandomIndexFunc = nil): TDeckPair;
-function CreateGame(
-  const PlayerNames: array of string;
-  ADiceRoller: TDiceRoller = nil;
-  ARandomIndex: TRandomIndexFunc = nil
-  ): TGame;
+function CreateBoard: TBoard;
+function BuildChanceCards: TArray<TMonopolyCard>;
+function BuildCommunityChestCards: TArray<TMonopolyCard>;
 
 implementation
 
 function AddTile(
-  Board: TObjectList<TTile>;
+  Board: TBoard;
   AId: integer;
   const AName: string;
   ATileType: TTileType;
@@ -80,9 +75,9 @@ begin
   ];
 end;
 
-function CreateBoard: TObjectList<TTile>;
+function CreateBoard: TBoard;
 begin
-  Result := TObjectList<TTile>.Create(True);
+  Result := TBoard.Create(True);
   AddTile(Result, 0, 'Start', ttStart);
   AddTile(Result, 1, 'Mediterranean Avenue', ttProperty, 'dark-purple', 60, 2);
   AddTile(Result, 2, 'Chance', ttChance);
@@ -123,45 +118,6 @@ begin
   AddTile(Result, 37, 'Park Place', ttProperty, 'dark-blue', 350, 35);
   AddTile(Result, 38, 'Luxury Tax', ttTax, '', 0, 0, 100);
   AddTile(Result, 39, 'Boardwalk', ttProperty, 'dark-blue', 400, 50);
-end;
-
-function CreateDecks(ARandomIndex: TRandomIndexFunc): TDeckPair;
-var
-  Chance: TDeck;
-  CommunityChest: TDeck;
-begin
-  Chance := TDeck.Create(BuildChanceCards, ARandomIndex);
-  CommunityChest := TDeck.Create(BuildCommunityChestCards, ARandomIndex);
-  Chance.Shuffle;
-  CommunityChest.Shuffle;
-  Result := TDeckPair.Create(Chance, CommunityChest);
-end;
-
-function CreateGame(
-  const PlayerNames: array of string;
-  ADiceRoller: TDiceRoller;
-  ARandomIndex: TRandomIndexFunc
-  ): TGame;
-begin
-  Result := TGame.Create(
-    CreatePlayers(PlayerNames),
-    CreateBoard,
-    CreateDecks(ARandomIndex),
-    ADiceRoller
-  );
-end;
-
-function CreatePlayers(
-  const Names: array of string
-  ): TObjectList<TPlayer>;
-var
-  Index: integer;
-begin
-  Result := TObjectList<TPlayer>.Create(True);
-  for Index := Low(Names) to High(Names) do
-  begin
-    Result.Add(TPlayer.Create(Index + 1, Names[Index]));
-  end;
 end;
 
 end.

@@ -3,86 +3,105 @@ unit Monopoly.Transactions;
 interface
 
 uses
-  System.Generics.Collections,
   Monopoly.Types;
 
 type
   ITransactionService = interface
     ['{48D7872F-CC4A-4D43-90E7-B30D2B7C77C0}']
-    function GetOwner(Game: TGame): TPlayer;
+    function CollectFromBank(
+      Player: TPlayer;
+      Amount: integer
+      ): integer;
     function TransferMoney(
       FromPlayer: TPlayer;
       ToPlayer: TPlayer;
       Amount: integer;
-      Board: TObjectList<TTile>;
-      const Log: TLogProc = nil
+      Board: TBoard;
+      const OnLog: TLogEvent = nil
       ): integer;
     function ChargePlayer(
       Player: TPlayer;
       Amount: integer;
-      Board: TObjectList<TTile>;
-      const Log: TLogProc = nil
+      Board: TBoard;
+      const Log: TLogEvent
       ): integer;
     procedure MarkPlayerBankrupt(
       Player: TPlayer;
-      Board: TObjectList<TTile>;
+      Board: TBoard;
       Creditor: TPlayer = nil;
-      const Log: TLogProc = nil
+      const OnLog: TLogEvent = nil
       );
   end;
 
-function CreateTransactionService: ITransactionService;
+type
+  TTransactionService = class(TInterfacedObject, ITransactionService)
+  private
+    procedure ReleasePlayerProperties(
+      Player: TPlayer;
+      Board: TBoard
+      );
+    procedure TransferPlayerProperties(
+      Player: TPlayer;
+      Creditor: TPlayer;
+      Board: TBoard
+      );
+  public
+    function CollectFromBank(
+      Player: TPlayer;
+      Amount: integer
+      ): integer;
+    function TransferMoney(
+      FromPlayer: TPlayer;
+      ToPlayer: TPlayer;
+      Amount: integer;
+      Board: TBoard;
+      const OnLog: TLogEvent = nil
+      ): integer;
+    function ChargePlayer(
+      Player: TPlayer;
+      Amount: integer;
+      Board: TBoard;
+      const Log: TLogEvent = nil
+      ): integer;
+    procedure MarkPlayerBankrupt(
+      Player: TPlayer;
+      Board: TBoard;
+      Creditor: TPlayer = nil;
+      const OnLog: TLogEvent = nil
+      );
+  end;
 
 implementation
 
 uses
   System.SysUtils;
 
-type
-  TDefaultTransactionService = class(TInterfacedObject, ITransactionService)
-  private
-    procedure ReleasePlayerProperties(
-      Player: TPlayer;
-      Board: TObjectList<TTile>
-      );
-    procedure TransferPlayerProperties(
-      Player: TPlayer;
-      Creditor: TPlayer;
-      Board: TObjectList<TTile>
-      );
-  public
-    function GetOwner(Game: TGame): TPlayer;
-    function TransferMoney(
-      FromPlayer: TPlayer;
-      ToPlayer: TPlayer;
-      Amount: integer;
-      Board: TObjectList<TTile>;
-      const Log: TLogProc = nil
-      ): integer;
-    function ChargePlayer(
-      Player: TPlayer;
-      Amount: integer;
-      Board: TObjectList<TTile>;
-      const Log: TLogProc = nil
-      ): integer;
-    procedure MarkPlayerBankrupt(
-      Player: TPlayer;
-      Board: TObjectList<TTile>;
-      Creditor: TPlayer = nil;
-      const Log: TLogProc = nil
-      );
+
+function TTransactionService.CollectFromBank(
+  Player: TPlayer;
+  Amount: integer
+  ): integer;
+begin
+  if Amount <= 0 then
+  begin
+    Exit(0);
   end;
 
-function CreateTransactionService: ITransactionService;
-begin
-  Result := TDefaultTransactionService.Create;
+  if Player = nil then
+  begin
+    raise Exception.Create('Player must be a valid player object.');
+  end;
+
+  Player.Money := Player.Money + Amount;
+  Result := Amount;
 end;
 
-function TDefaultTransactionService.ChargePlayer(
+
+function TTransactionService.ChargePlayer(
   Player: TPlayer;
   Amount: integer;
-  Board: TObjectList<TTile>;
-  const Log: TLogProc
+  Board: TBoard;
+  const Log: TLogEvent = nil
   ): integer;
 begin
   if Amount <= 0 then
@@ -113,16 +132,11 @@ begin
   end;
 end;
 
-function TDefaultTransactionService.GetOwner(Game: TGame): TPlayer;
-begin
-  Result := Game.CurrentTileOwner;
-end;
-
-procedure TDefaultTransactionService.MarkPlayerBankrupt(
+procedure TTransactionService.MarkPlayerBankrupt(
   Player: TPlayer;
-  Board: TObjectList<TTile>;
+  Board: TBoard;
   Creditor: TPlayer;
-  const Log: TLogProc
+  const OnLog: TLogEvent
   );
 begin
   if (Player = nil) or Player.IsBankrupt then
@@ -135,9 +149,9 @@ begin
   begin
     Player.Money := 0;
     ReleasePlayerProperties(Player, Board);
-    if Assigned(Log) then
+    if Assigned(OnLog) then
     begin
-      Log(Format('%s is bankrupt and out of the game.', [Player.Name]));
+      OnLog(Format('%s is bankrupt and out of the game.', [Player.Name]));
     end;
     Exit;
   end;
@@ -149,15 +163,15 @@ begin
 
   Player.Money := 0;
   TransferPlayerProperties(Player, Creditor, Board);
-  if Assigned(Log) then
+  if Assigned(OnLog) then
   begin
-    Log(Format('%s is bankrupt and transfers all assets to %s.', [Player.Name, Creditor.Name]));
+    OnLog(Format('%s is bankrupt and transfers all assets to %s.', [Player.Name, Creditor.Name]));
   end;
 end;
 
-procedure TDefaultTransactionService.ReleasePlayerProperties(
+procedure TTransactionService.ReleasePlayerProperties(
   Player: TPlayer;
-  Board: TObjectList<TTile>
+  Board: TBoard
   );
 var
   Tile: TTile;
@@ -171,12 +185,12 @@ begin
   end;
 end;
 
-function TDefaultTransactionService.TransferMoney(
+function TTransactionService.TransferMoney(
   FromPlayer: TPlayer;
   ToPlayer: TPlayer;
   Amount: integer;
-  Board: TObjectList<TTile>;
-  const Log: TLogProc
+  Board: TBoard;
+  const OnLog: TLogEvent
   ): integer;
 begin
   if Amount <= 0 then
@@ -210,14 +224,14 @@ begin
 
   if Result < Amount then
   begin
-    MarkPlayerBankrupt(FromPlayer, Board, ToPlayer, Log);
+    MarkPlayerBankrupt(FromPlayer, Board, ToPlayer, OnLog);
   end;
 end;
 
-procedure TDefaultTransactionService.TransferPlayerProperties(
+procedure TTransactionService.TransferPlayerProperties(
   Player: TPlayer;
   Creditor: TPlayer;
-  Board: TObjectList<TTile>
+  Board: TBoard
   );
 var
   Tile: TTile;

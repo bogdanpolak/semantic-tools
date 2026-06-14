@@ -48,21 +48,14 @@ end;
 function FormatMethodInfo(const MethodInfo: TMethodInfo): string;
 var
   QualifiedMethodName: string;
-  VisibilityText: string;
 begin
   if MethodInfo.ClassName <> '' then
     QualifiedMethodName := MethodInfo.ClassName + '.' + MethodInfo.MethodName
   else
     QualifiedMethodName := MethodInfo.MethodName;
 
-  if MethodInfo.IsPublic then
-    VisibilityText := 'public'
-  else
-    VisibilityText := 'private';
-
-  Result := Format('  %-55s %-28s %-8s %5d',
-    [QualifiedMethodName, MethodInfo.UnitName,
-    VisibilityText, MethodInfo.BodyLines]);
+  Result := Format('  %-55s %-28s %5d',
+    [QualifiedMethodName, MethodInfo.UnitName, MethodInfo.BodyLines]);
 end;
 
 class procedure TReportPrinter.Print(const AnalysisResult: TAnalysisResult);
@@ -93,10 +86,9 @@ begin
     WriteLn;
     WriteLn('=== SourceLens Report ===');
     WriteLn;
-    WriteLn(Format('  %-55s %-28s %-8s %5s',
-      ['Method name', 'Unit name', 'Visibility', 'Size']));
+    WriteLn(Format('  %-55s %-28s %5s', ['Method name', 'Unit name', 'Size']));
     WriteLn('  ', StringOfChar('-', 55), ' ', StringOfChar('-', 28),
-      ' ', StringOfChar('-', 8), ' -----');
+      ' ', StringOfChar('-', 5));
 
     TotalMethods := SortedMethods.Count;
     TotalLines := 0;

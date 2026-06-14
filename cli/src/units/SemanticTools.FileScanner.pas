@@ -1,4 +1,4 @@
-unit SourceLens.FileScanner;
+unit SemanticTools.FileScanner;
 
 interface
 

@@ -10,8 +10,8 @@ uses
   System.Generics.Collections,
   DUnitX.TestFramework,
   Tests.SourceLens.Utils,
+  SemanticTools.DelphiAstParser,
   SourceLens.DelphiAnalyzer,
-  SourceLens.ParserEnvironment,
   SourceLens.Types;
 
 type
@@ -19,7 +19,8 @@ type
   TDelphiAnalyzerTests = class
   private
     SUT: IDelphiAnalyzer;
-    FSourceFileProvider: TFakeSourceFileProvider;
+    FAstParser: IAstParser;
+    FFakeFileRepository: TFakeFileRepository;
     AnalysisResult: TAnalysisResult;
     MetodDefs: TArray<string>;
     procedure GivenFile(
@@ -88,12 +89,12 @@ begin
     'end.'
   ]);
 
-  AnalysisResult := SUT.AnalyzeUnits(['C:\Abc\Unit1.pas']);
+  AnalysisResult := SUT.AnalyzeRepository(['C:\Abc\Unit1.pas']);
 
   MetodDefs := GetFullMethodNames(AnalysisResult);
   Assert.AreEqual(2, Length(MetodDefs));
-  Assert.AreEqual('Unit1 | +PublicProcedure', MetodDefs[0]);
-  Assert.AreEqual('Unit1 | -CheckIfHasMonopoly', MetodDefs[1]);
+  Assert.AreEqual('Unit1 | PublicProcedure', MetodDefs[0]);
+  Assert.AreEqual('Unit1 | CheckIfHasMonopoly', MetodDefs[1]);
   Assert.AreEqual(15, AnalysisResult.MethodInfos[1].BodyLines)
 end;
 
@@ -118,7 +119,7 @@ begin
     'type',
     '  TWidget = class',
     '  public',
-    '    procedure PublicMethod;',  // FIXIT: should be public, but it's private
+    '    procedure PublicMethod;',
     '  private',
     '    procedure PrivateMethod;',
     '  end;',
@@ -142,7 +143,7 @@ begin
     'end.'
   ]);
 
-  AnalysisResult := SUT.AnalyzeUnits(
+  AnalysisResult := SUT.AnalyzeRepository(
     ['C:\Sources\BrokenUnit.pas', 'C:\Sources\ValidUnit.pas']);
 
   Assert.AreEqual(1, Length(AnalysisResult.ParseFailures));
@@ -151,9 +152,9 @@ begin
 
   MetodDefs := GetFullMethodNames(AnalysisResult);
   Assert.AreEqual(3, Length(MetodDefs));
-  Assert.AreEqual('ValidUnit | +PublicProc', MetodDefs[0]);
-  Assert.AreEqual('ValidUnit | -TWidget.PublicMethod', MetodDefs[1]);  // FIXME: public
-  Assert.AreEqual('ValidUnit | -TWidget.PrivateMethod', MetodDefs[2]);
+  Assert.AreEqual('ValidUnit | PublicProc', MetodDefs[0]);
+  Assert.AreEqual('ValidUnit | TWidget.PublicMethod', MetodDefs[1]);
+  Assert.AreEqual('ValidUnit | TWidget.PrivateMethod', MetodDefs[2]);
 end;
 
 procedure TDelphiAnalyzerTests.AnalyzeUnits_MainApp_WorkerUnit;
@@ -185,7 +186,7 @@ begin
     'end.'
   ]);
 
-  AnalysisResult := SUT.AnalyzeUnits([
+  AnalysisResult := SUT.AnalyzeRepository([
     'C:\Src\UtilityProgram.pas',
     'C:\Src\WorkerUnit.pas']);
 
@@ -193,7 +194,7 @@ begin
 
   MetodDefs := GetFullMethodNames(AnalysisResult);
   Assert.AreEqual(1, Length(MetodDefs));
-  Assert.AreEqual('WorkerUnit | -TWorker.Execute', MetodDefs[0]);   // FIXME: public
+  Assert.AreEqual('WorkerUnit | TWorker.Execute', MetodDefs[0]);
 end;
 
 procedure TDelphiAnalyzerTests.AnalyzeUnits_IsolatedPerCall;
@@ -243,15 +244,15 @@ begin
     'end.'
   ]);
 
-  AnalysisResult1 := SUT.AnalyzeUnits(['C:\src\Unit1.pas']);
-  AnalysisResult2 := SUT.AnalyzeUnits(['C:\src\Unit2.pas']);
+  AnalysisResult1 := SUT.AnalyzeRepository(['C:\src\Unit1.pas']);
+  AnalysisResult2 := SUT.AnalyzeRepository(['C:\src\Unit2.pas']);
 
   Names1 := GetFullMethodNames(AnalysisResult1);
   Names2 := GetFullMethodNames(AnalysisResult2);
   Assert.AreEqual(1, Length(Names1));
-  Assert.AreEqual('Unit1 | -TFirstRun.FirstOnly', Names1[0]);
+  Assert.AreEqual('Unit1 | TFirstRun.FirstOnly', Names1[0]);
   Assert.AreEqual(1, Length(Names2));
-  Assert.AreEqual('Unit2 | -TSecondRun.SecondOnly', Names2[0]);
+  Assert.AreEqual('Unit2 | TSecondRun.SecondOnly', Names2[0]);
 end;
 
 procedure TDelphiAnalyzerTests.AnalyzeUnits_SupportsIncludesAndConditionalDirectives;
@@ -294,29 +295,28 @@ begin
     'end.'
   ]);
 
-  AnalysisResult := SUT.AnalyzeUnits(['C:\Src\BaseUnit.pas']);
+  AnalysisResult := SUT.AnalyzeRepository(['C:\Src\BaseUnit.pas']);
 
   Assert.AreEqual(0, Length(AnalysisResult.ParseFailures));
   Assert.AreEqual(2, Length(AnalysisResult.MethodInfos));
   MetodDefs := GetFullMethodNames(AnalysisResult);
-  Assert.AreEqual('BaseUnit | -TBox.IncludedMethod', MetodDefs[0]);
-  Assert.AreEqual('BaseUnit | -TBox.WindowsOnlyMethod', MetodDefs[1]);
+  Assert.AreEqual('BaseUnit | TBox.IncludedMethod', MetodDefs[0]);
+  Assert.AreEqual('BaseUnit | TBox.WindowsOnlyMethod', MetodDefs[1]);
 end;
 
 procedure TDelphiAnalyzerTests.GivenFile(const AFileName: string;
   const AFileContent: array of string);
 begin
-  FSourceFileProvider.AddStringsAsFile(AFileName, AFileContent);
+  FFakeFileRepository.AddStringsAsFile(AFileName, AFileContent);
 end;
 
 procedure TDelphiAnalyzerTests.Setup;
 begin
-  FSourceFileProvider := TFakeSourceFileProvider.Create;
-  SUT := CreateDelphiAnalyzer(
-    FSourceFileProvider,
-    CreateDelphiParserEnvironment
-    );
+  FFakeFileRepository := TFakeFileRepository.Create;
+  FAstParser := CreateAstParser(FFakeFileRepository);
+  SUT := TDelphiAnalyzer.Create(FAstParser);
 end;
+
 
 initialization
   TDUnitX.RegisterTestFixture(TDelphiAnalyzerTests);

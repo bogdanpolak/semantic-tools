@@ -82,13 +82,12 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="units\SourceLens.Main.pas"/>
-        <DCCReference Include="units\SourceLens.FileScanner.pas"/>
+        <DCCReference Include="units\SemanticTools.FileScanner.pas"/>
         <DCCReference Include="units\SourceLens.Types.pas"/>
-        <DCCReference Include="units\SourceLens.Extractor.PublicMethods.pas"/>
         <DCCReference Include="units\SourceLens.ReportPrinter.pas"/>
         <DCCReference Include="units\SourceLens.DelphiAnalyzer.pas"/>
-        <DCCReference Include="units\SourceLens.Utils.pas"/>
-        <DCCReference Include="units\SourceLens.ParserEnvironment.pas"/>
+        <DCCReference Include="units\SemanticTools.Utils.pas"/>
+        <DCCReference Include="units\SemanticTools.DelphiAstParser.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

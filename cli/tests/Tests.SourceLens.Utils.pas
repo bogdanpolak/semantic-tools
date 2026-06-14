@@ -9,11 +9,11 @@ uses
   System.SysUtils,
   System.StrUtils,
   DUnitX.TestFramework,
-  SourceLens.ParserEnvironment,
+  SemanticTools.DelphiAstParser,
   SourceLens.Types;
 
 type
-  TFakeSourceFileProvider = class(TInterfacedObject, ISourceFileProvider)
+  TFakeFileRepository = class(TInterfacedObject, IFileRepository)
   private
     FFiles: TDictionary<string, string>;
   public
@@ -31,13 +31,13 @@ function GetFullMethodNames(const AAnalysisResult: TAnalysisResult): TArray<stri
 
 implementation
 
-constructor TFakeSourceFileProvider.Create;
+constructor TFakeFileRepository.Create;
 begin
   inherited Create;
   FFiles := TDictionary<string, string>.Create;
 end;
 
-destructor TFakeSourceFileProvider.Destroy;
+destructor TFakeFileRepository.Destroy;
 begin
   FFiles.Free;
   inherited;
@@ -48,7 +48,7 @@ begin
   Result := AnsiLowerCase(TPath.GetFullPath(AFileName));
 end;
 
-procedure TFakeSourceFileProvider.AddStringsAsFile(
+procedure TFakeFileRepository.AddStringsAsFile(
   const AFileName: string;
   const ALines: array of string
   );
@@ -59,7 +59,7 @@ begin
   FFiles.AddOrSetValue(NormalizeFileName(AFileName), Txt);
 end;
 
-function TFakeSourceFileProvider.OpenRead(const AFileName: string): TStream;
+function TFakeFileRepository.OpenRead(const AFileName: string): TStream;
 var
   Content: string;
 begin
@@ -73,7 +73,6 @@ function GetFullMethodNames(const AAnalysisResult: TAnalysisResult): TArray<stri
 var
   Count: integer;
   Idx: integer;
-  PublicChar: string;
   AInfo: TMethodInfo;
 begin
   Count := Length(AAnalysisResult.MethodInfos);
@@ -81,13 +80,12 @@ begin
   for Idx := 0 to Count-1 do
   begin
     AInfo := AAnalysisResult.MethodInfos[Idx];
-    PublicChar := IfThen(AInfo.IsPublic, '+', '-');
     if AInfo.ClassName = '' then
-      Result[Idx] := Format('%s | %s%s',
-        [AInfo.UnitName, PublicChar, AInfo.MethodName])
+      Result[Idx] := Format('%s | %s',
+        [AInfo.UnitName, AInfo.MethodName])
     else
-      Result[Idx] := Format('%s | %s%s.%s',
-        [AInfo.UnitName, PublicChar, AInfo.ClassName, AInfo.MethodName])
+      Result[Idx] := Format('%s | %s.%s',
+        [AInfo.UnitName, AInfo.ClassName, AInfo.MethodName])
   end;
 end;
 
