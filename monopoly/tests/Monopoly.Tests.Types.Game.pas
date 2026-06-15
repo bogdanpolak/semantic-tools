@@ -47,6 +47,9 @@ type
     procedure CurrentPlayer_Results;
 
     [Test]
+    procedure Create_SetsCreatedStatus;
+
+    [Test]
     procedure CurrentPlayerTileOwner_NilWhenTileIsUnowned;
 
     [Test]
@@ -87,6 +90,9 @@ type
 
     [Test]
     procedure MovePlayerTo_SetsExactPosition;
+
+    [Test]
+    procedure GameStarts_HasTileUnmortgaged;
   end;
 
 implementation
@@ -180,6 +186,18 @@ begin
   Assert.AreEqual('Alice', FGame.CurrentPlayer().Name);
 end;
 
+procedure TTypeTests.GameStarts_HasTileUnmortgaged;
+begin
+  FGame.StartGame([], 1);
+  Assert.IsFalse(FGame.Board[1].Mortgaged);
+end;
+
+
+procedure TTypeTests.Create_SetsCreatedStatus;
+begin
+  Assert.AreEqual(gsCreated, FGame.Status);
+end;
+
 procedure TTypeTests.CurrentPlayerTileOwner_NilWhenTileIsUnowned;
 begin
   FGame.StartGame(['Alice', 'Bob'], MAX_ROUNDS);
@@ -220,7 +238,7 @@ begin
   Assert.IsFalse(IsOK);
   Assert.AreEqual('Bob wins the game.', FGame.TermiantionReason);
   Assert.AreEqual('Bob', FGame.Players[1].Name);
-  Assert.isFalse( FGame.IsGameActive);
+  Assert.AreEqual(gsFinished, FGame.Status);
 end;
 
 procedure TTypeTests.NextTurn_SkipsBankruptCharliePlayers;

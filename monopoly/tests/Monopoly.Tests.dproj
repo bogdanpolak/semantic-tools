@@ -84,8 +84,8 @@
         </DelphiCompile>
         <DCCReference Include="Monopoly.Tests.Board.pas"/>
         <DCCReference Include="Monopoly.Tests.Factories.pas"/>
-        <DCCReference Include="Monopoly.Tests.PropertyDevelopment.pas"/>
-        <DCCReference Include="Monopoly.Tests.GameStatus.pas"/>
+        <DCCReference Include="rules\Monopoly.Tests.Decisions.pas"/>
+        <DCCReference Include="Monopoly.Tests.GameReport.pas"/>
         <DCCReference Include="Monopoly.Tests.PlayTurn.pas"/>
         <DCCReference Include="Monopoly.Tests.Transactions.pas"/>
         <DCCReference Include="Monopoly.Tests.Utils.pas"/>
@@ -93,18 +93,19 @@
         <DCCReference Include="rules\Monopoly.Tests.Jail.pas"/>
         <DCCReference Include="rules\Monopoly.Tests.Landing.pas"/>
         <DCCReference Include="rules\Monopoly.Tests.Cards.pas"/>
-        <DCCReference Include="..\src\Monopoly.Factories.pas"/>
-        <DCCReference Include="..\src\Monopoly.GameStatus.pas"/>
-        <DCCReference Include="..\src\Monopoly.Types.pas"/>
-        <DCCReference Include="..\src\Monopoly.Utils.pas"/>
-        <DCCReference Include="..\src\Monopoly.CompositionRoot.pas"/>
-        <DCCReference Include="..\src\Monopoly.Transactions.pas"/>
-        <DCCReference Include="..\src\rules\Monopoly.Rules.Cards.pas"/>
-        <DCCReference Include="..\src\rules\Monopoly.Rules.Jail.pas"/>
-        <DCCReference Include="..\src\rules\Monopoly.Rules.Landing.pas"/>
-        <DCCReference Include="..\src\rules\Monopoly.Rules.Rent.pas"/>
         <DCCReference Include="Monopoly.Tests.Types.Deck.pas"/>
         <DCCReference Include="Monopoly.Tests.Types.Game.pas"/>
+        <DCCReference Include="..\src\Monopoly.Types.pas"/>
+        <DCCReference Include="..\src\Monopoly.Utils.pas"/>
+        <DCCReference Include="..\src\Monopoly.Factories.pas"/>
+        <DCCReference Include="..\src\Monopoly.GameReport.pas"/>
+        <DCCReference Include="..\src\Monopoly.CompositionRoot.pas"/>
+        <DCCReference Include="..\src\Monopoly.Transactions.pas"/>
+        <DCCReference Include="..\src\rules\Monopoly.Rules.Jail.pas"/>
+        <DCCReference Include="..\src\rules\Monopoly.Rules.Landing.pas"/>
+        <DCCReference Include="..\src\rules\Monopoly.Rules.Decisions.pas"/>
+        <DCCReference Include="..\src\Container.Game.pas"/>
+        <DCCReference Include="rules\Monopoly.Tests.Build.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

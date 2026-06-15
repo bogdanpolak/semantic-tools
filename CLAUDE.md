@@ -3,8 +3,8 @@
 - Delphi Applications: 
     - `cli/src/SourceLens.dpr` - CLI code analyzer for Delphi - code metrics.
     - `cli/tests/SourceLens.Tests.dpr` - DUnitX test suite for SourceLens.
-    - `monopoly/src/MonopolyConsole.dpr` - Monopoly CLI the Monopoly simulation.
-    - `monopoly/tests/Monopoly.Tests.dpr` - DUnitX Monopoly Test for Monoploy CLI.
+    - `monopoly/src/MonopolyFMX.dpr` - Monopoly FMX the Monopoly simulation.
+    - `monopoly/tests/Monopoly.Tests.dpr` - DUnitX Monopoly Test for Monopoly FMX.
 
 ## Monopoly FMX
 

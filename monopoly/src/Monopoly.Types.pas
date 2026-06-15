@@ -7,6 +7,17 @@ uses
   System.Generics.Collections;
 
 const
+  BOARD_SIZE = 40;
+  RAILROAD_POSITIONS: array[0..3] of integer = (5, 15, 25, 35);
+  UTILITY_POSITIONS: array[0..1] of integer = (12, 28);
+  RAILROAD_RENT: array[0..3] of integer = (25, 50, 100, 200);
+
+const
+  JAIL_FINE = 50;
+  JAIL_TILE_ID = 10;
+  MAX_FAILED_JAIL_ROLLS = 3;
+
+const
   NO_OWNER_ID = 0;
 
 type
@@ -39,6 +50,12 @@ type
     ctPayEachPlayer,
     ctGiftFromPlayers,
     ctStreetRepairs
+  );
+
+  TGameState = (
+    gsCreated,
+    gsActive,
+    gsFinished
   );
 
   TDiceRoll = record
@@ -134,6 +151,9 @@ type
     function IsOwned: boolean;
     function IsOwnedBy(const Player: TPlayer): boolean;
     function IsOwnable: boolean;
+    function HouseCost: integer;
+    function MortgageValue: integer;
+    function UnmortgageCost: integer;
   end;
 
   TBoard = class(TObjectList<TTile>)
@@ -180,6 +200,7 @@ type
 
   TDeck = class
   private
+    FDeckName: string;
     FShuffleCards: Boolean;
     FCards: TList<TMonopolyCard>;
     FDiscardedCards: TList<TMonopolyCard>;
@@ -188,7 +209,8 @@ type
   public
     constructor Create(
       const ACards: array of TMonopolyCard;
-      const AShuffleCards: boolean = True
+      const AShuffleCards: boolean;
+      const ADeckName: string
       );
     destructor Destroy; override;
     function DrawCard: TMonopolyCard;
@@ -211,7 +233,7 @@ type
     FRoundNumber: integer;
     FMaxRounds: integer;
     FTermiantionReason: string;
-    FIsGameActive: boolean;
+    FStatus: TGameState;
     FOnLog: TLogEvent;
     function DefaultDiceRoll: TDiceRoll;
   public
@@ -250,8 +272,20 @@ type
     function OwnerOfTile(const Tile: TTile): TPlayer;
     procedure ClearLastRoll();
     procedure SetLastRoll(const ARoll: TDiceRoll);
-    procedure SetDecks(const AChanceCards,
-      ACommunityChestCards: array of TMonopolyCard);
+    procedure SetDecks(
+      const AChanceCards: array of TMonopolyCard;
+      const ACommunityChestCards: array of TMonopolyCard;
+      const AShuffleCards: boolean
+      );
+    procedure SendCurrentPlayerToJail();
+    function Mortgage(
+      const Tile: TTile;
+      const Owner: TPlayer
+      ): integer;
+    function Unmortgage(
+      const Tile: TTile;
+      const Owner: TPlayer
+      ): integer;
     // -
     property DiceRoller: TDiceRoller read FDiceRoller write FDiceRoller;
     property Players: TObjectList<TPlayer> read FPlayers write FPlayers;
@@ -265,7 +299,7 @@ type
     property RoundNumber: integer read FRoundNumber;
     property MaxRounds: integer read FMaxRounds;
     property TermiantionReason: string read FTermiantionReason;
-    property IsGameActive: boolean read FIsGameActive;
+    property Status: TGameState read FStatus;
     property OnLog: TLogEvent read FOnLog write FOnLog;
   end;
 
@@ -448,6 +482,42 @@ function TTile.IsOwnedBy(const Player: TPlayer): boolean;
 begin
   Result := (Player <> nil) and (OwnerId = Player.Id);
 end;
+
+function TTile.MortgageValue: integer;
+begin
+  Result := Price div 2;
+end;
+
+function TTile.UnmortgageCost: integer;
+begin
+  Result := (Price div 2 * 11 + 9) div 10;
+end;
+
+function TTile.HouseCost: integer;
+begin
+  if SameText(Color, 'dark-purple') or SameText(Color, 'light-blue') then
+  begin
+    Exit(50);
+  end;
+
+  if SameText(Color, 'purple') or SameText(Color, 'orange') then
+  begin
+    Exit(100);
+  end;
+
+  if SameText(Color, 'red') or SameText(Color, 'yellow') then
+  begin
+    Exit(150);
+  end;
+
+  if SameText(Color, 'green') or SameText(Color, 'dark-blue') then
+  begin
+    Exit(200);
+  end;
+
+  raise Exception.CreateFmt('Unsupported house cost for tile color %s.', [Color]);
+end;
+
 
 function TTile.IsOwnable: boolean;
 begin
@@ -799,9 +869,11 @@ end;
 
 constructor TDeck.Create(
   const ACards: array of TMonopolyCard;
-  const AShuffleCards: boolean = True
+  const AShuffleCards: boolean;
+  const ADeckName: string
   );
 begin
+  FDeckName := ADeckName;
   FShuffleCards := AShuffleCards;
   inherited Create;
   FCards := TList<TMonopolyCard>.Create(ACards);
@@ -886,9 +958,9 @@ end;
 constructor TGame.Create();
 begin
   inherited Create;
-  FBoard := CreateBoard;
-  FChanceDeck := TDeck.Create(BuildChanceCards);
-  FCommunityChestDeck := TDeck.Create(BuildCommunityChestCards);
+  FBoard := TBoard.Create();
+  FChanceDeck := TDeck.Create([], True, '');
+  FCommunityChestDeck := TDeck.Create([], True, '');
   FPlayers := TObjectList<TPlayer>.Create;
   FBoard.AttachGame(Self);
   FDiceRoller := DefaultDiceRoll;
@@ -896,7 +968,7 @@ begin
   FHasLastRoll := False;
   FTurnNumber := 0;
   FRoundNumber := 0;
-  FIsGameActive := False;
+  FStatus := gsCreated;
 end;
 
 destructor TGame.Destroy;
@@ -923,7 +995,8 @@ begin
   FMaxRounds := AMaxRounds;
   FTurnNumber := 1;
   FRoundNumber := 1;
-  FIsGameActive := True;
+  FStatus := gsActive;
+  FTermiantionReason := '';
 
   if (AShuffleCards) then
   begin
@@ -933,11 +1006,27 @@ begin
 
   FCurrentPlayerId := 1;
   PlayerId := 1;
+
+  FreeAndNil(FBoard);
+  FreeAndNil(FChanceDeck);
+  FreeAndNil(FCommunityChestDeck);
+
+  FBoard := CreateBoard;
+  FChanceDeck := TDeck.Create(BuildChanceCards, True, 'Chance Deck');
+  FCommunityChestDeck := TDeck.Create(BuildCommunityChestCards, True, 'Community Chest Deck');
   FPlayers.Clear;
   for Name in APlayerNames do
   begin
     FPlayers.Add(TPlayer.Create(PlayerId, Name));
     Inc(PlayerId);
+  end;
+
+  FBoard.AttachGame(Self);
+
+  if (AShuffleCards) then
+  begin
+    FChanceDeck.Shuffle;
+    FCommunityChestDeck.Shuffle;
   end;
 end;
 
@@ -1027,15 +1116,33 @@ begin
   FLastRoll := ARoll;
 end;
 
+procedure TGame.SendCurrentPlayerToJail;
+var
+  Player: TPlayer;
+begin
+  Player := CurrentPlayer;
+  if Player = nil then
+  begin
+    Exit;
+  end;
+
+  MovePlayerTo(Player, JAIL_TILE_ID);
+  Player.IsInJail := True;
+  Player.FailedJailRolls := 0;
+end;
+
+
+
 procedure TGame.SetDecks(
   const AChanceCards: array of TMonopolyCard;
-  const ACommunityChestCards: array of TMonopolyCard
+  const ACommunityChestCards: array of TMonopolyCard;
+  const AShuffleCards: boolean
   );
 begin
   FreeAndNil(FChanceDeck);
   FreeAndNil(FCommunityChestDeck);
-  FChanceDeck := TDeck.Create(AChanceCards);
-  FCommunityChestDeck := TDeck.Create(ACommunityChestCards);
+  FChanceDeck := TDeck.Create(AChanceCards, AShuffleCards, 'Chance Deck');
+  FCommunityChestDeck := TDeck.Create(ACommunityChestCards, AShuffleCards, 'Community Chest Deck');
 end;
 
 procedure TGame.Log(const Message: string);
@@ -1045,6 +1152,42 @@ begin
     FOnLog(Message);
   end;
 end;
+
+function TGame.Mortgage(
+  const Tile: TTile;
+  const Owner: TPlayer
+  ): integer;
+begin
+  if Tile.OwnerId <> Owner.Id then
+    raise Exception.CreateFmt('Player "%s" is not an owner of "%s".', [Owner.Name, Tile.Name]);
+
+  if Tile.Mortgaged then
+    raise Exception.CreateFmt('Tile "%s" is mortgaged already.', [Tile.Name]);
+
+  Result := Tile.MortgageValue;
+  Tile.Mortgaged := True;
+end;
+
+function TGame.Unmortgage(
+  const Tile: TTile;
+  const Owner: TPlayer
+  ): integer;
+begin
+  if Tile.OwnerId <> Owner.Id then
+    raise Exception.CreateFmt('Player "%s" is not an owner of "%s".', [Owner.Name, Tile.Name]);
+
+  if not(Tile.Mortgaged) then
+    raise Exception.CreateFmt('Tile "%s" is unmortgaged already.', [Tile.Name]);
+
+  if Owner.Money < Tile.UnmortgageCost then
+    raise Exception.CreateFmt(
+      'Player %s cant afford unmortgage. Has: %d, but needs %d.',
+      [Owner.Name, Owner.Money, Tile.UnmortgageCost]);
+
+  Result := Tile.UnmortgageCost;
+  Tile.Mortgaged := False;
+end;
+
 
 function TGame.MovePlayerBy(
   Player: TPlayer;
@@ -1123,9 +1266,10 @@ var
   IsActivePlayerLocated: boolean;
   NextPlayerId: integer;
 begin
+  Inc(FTurnNumber);
   if FRoundNumber >= FMaxRounds then
   begin
-    FIsGameActive := False;
+    FStatus := gsFinished;
     FTermiantionReason := Format('Reached maximum number of rounds: %d. Ending game.', [MaxRounds]);
     Exit(False);
   end;
@@ -1141,7 +1285,7 @@ begin
   begin
     var Player := GetPlayerById(ActivePlayerIds[0]);
     FTermiantionReason := Format('%s wins the game.', [Player.Name]);
-    FIsGameActive := False;
+    FStatus := gsFinished;
     Exit(False);
   end;
 
@@ -1166,7 +1310,6 @@ begin
     NextPlayerId := ActivePlayerIds[0];
     Inc(FRoundNumber);
   end;
-  Inc(FTurnNumber);
   FCurrentPlayerId := NextPlayerId;
   Result := True;
 end;

@@ -13,7 +13,7 @@ type
     function GetTransactionService: ITransactionService;
   end;
 
-function CreateMonoployServices: IMonopolyServices;
+function CreateMonopolyServices: IMonopolyServices;
 
 implementation
 
@@ -27,7 +27,7 @@ type
     function GetTransactionService: ITransactionService;
   end;
 
-function CreateMonoployServices: IMonopolyServices;
+function CreateMonopolyServices: IMonopolyServices;
 begin
   Result := TMonopolyServices.Create()
 end;

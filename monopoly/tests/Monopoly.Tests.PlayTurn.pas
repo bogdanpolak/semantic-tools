@@ -232,7 +232,7 @@ begin
 
   Assert.AreEqual(1, FGame.TurnNumber);
   Assert.AreEqual(1, FGame.RoundNumber);
-  Assert.IsFalse(FGame.IsGameActive);
+  Assert.AreEqual(gsFinished, FGame.Status);
   Assert.IsTrue(FGame.Players[0].IsBankrupt);
 end;
 

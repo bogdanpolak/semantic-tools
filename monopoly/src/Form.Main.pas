@@ -31,7 +31,7 @@ uses
   FMX.EditBox,
   FMX.SpinBox,
   Monopoly.Types,
-  Monopoly.GameStatus;
+  Monopoly.GameReport;
 
 type
   TForm1 = class(TForm)
@@ -47,17 +47,30 @@ type
     Label2: TLabel;
     lblRounds: TLabel;
     GroupBox1: TGroupBox;
-    btnPlayTurn: TButton;
     lblGameTurns: TLabel;
     lblGameRounds: TLabel;
     sbtnMaxTurns: TSpinBox;
     Rectangle1: TRectangle;
     btnPlayGame: TButton;
+    GroupBox2: TGroupBox;
+    btnPlayTurn: TButton;
+    btnCompleteGame: TButton;
+    btnClearLog: TButton;
+    Rectangle2: TRectangle;
     procedure btnPlayTurnClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure btnPlayGameClick(Sender: TObject);
+    procedure btnClearLogClick(Sender: TObject);
+    procedure btnCompleteGameClick(Sender: TObject);
   private
-    procedure ShowSummaryFmx(const AGrid: TStringGrid);
+    FGameOnLog: TLogEvent;
+
+    procedure ShowSummaryFmx(
+      const AGrid: TStringGrid;
+      const AGameReport: IGameReport
+      );
     procedure BuildStatusGrid(const AGrid: TStringGrid);
+    procedure UpdateGameDisplay();
   public
     { Public declarations }
   end;
@@ -72,22 +85,70 @@ implementation
 uses
   Monopoly.Factories,
   Monopoly.CompositionRoot,
-  MainModule;
+  Container.Game;
 
-procedure TForm1.btnPlayTurnClick(Sender: TObject);
-var
-  GameOnLog: TLogEvent;
+procedure TForm1.btnClearLogClick(Sender: TObject);
 begin
   Memo1.Lines.Clear;
-  GameOnLog :=
-    procedure(const Message: string)
-    begin
-      Memo1.Lines.Add(Message)
-    end;
+end;
 
-  GameContainer.StartGame(['Alice', 'Bob', 'Charlie', 'Diana'], GameOnLog);
-  GameContainer.PlayGame();
-  ShowSummaryFmx(StringGrid1);
+procedure TForm1.btnCompleteGameClick(Sender: TObject);
+begin
+  while GameContainer.GameState = gsActive do
+  begin
+    GameContainer.PlayTurn();
+    GameContainer.NextTurn();
+  end;
+  UpdateGameDisplay();
+end;
+
+procedure TForm1.btnPlayGameClick(Sender: TObject);
+begin
+  if GameContainer.GameState = gsActive then
+  begin
+    btnPlayGame.Enabled := False;
+    Exit;
+  end;
+  Memo1.Lines.Clear;
+  var MaxRounds := Round(sbtnMaxTurns.Value);
+  GameContainer.StartGame(['Alice', 'Bob', 'Charlie', 'Diana'], MaxRounds, FGameOnLog);
+
+  while GameContainer.GameState = gsActive do
+  begin
+    GameContainer.PlayTurn();
+    GameContainer.NextTurn();
+  end;
+
+  UpdateGameDisplay();
+end;
+
+procedure TForm1.btnPlayTurnClick(Sender: TObject);
+begin
+  var IsGameStart := GameContainer.GameState <> gsActive;
+  if IsGameStart then
+  begin
+    Memo1.Lines.Clear;
+    var MaxRounds := Round(sbtnMaxTurns.Value);
+    GameContainer.StartGame(['Alice', 'Bob', 'Charlie', 'Diana'], MaxRounds, FGameOnLog);
+    btnPlayGame.Enabled := False;
+    sbtnMaxTurns.Enabled := False;
+    btnPlayTurn.Text := 'Play Turn';
+  end;
+
+  if not(IsGameStart) then
+  begin
+    GameContainer.NextTurn();
+  end;
+  GameContainer.PlayTurn();
+
+  UpdateGameDisplay;
+
+  if GameContainer.GameState = gsFinished then
+  begin
+    btnPlayGame.Enabled := True;
+    sbtnMaxTurns.Enabled := True;
+    btnPlayTurn.Text := 'Start Game';
+  end;
 end;
 
 procedure TForm1.BuildStatusGrid(const AGrid: TStringGrid);
@@ -158,19 +219,19 @@ begin
   AGrid.AddObject(ColumnPropertyList);
 end;
 
-procedure TForm1.ShowSummaryFmx(const AGrid: TStringGrid);
+procedure TForm1.ShowSummaryFmx(
+  const AGrid: TStringGrid;
+  const AGameReport: IGameReport
+  );
 var
-  GameStatus: IGameStatus;
-  Item: IGameStatusItem;
+  Item: IGameReportItem;
   Prefix: string;
 begin
-  GameStatus := GameContainer.GameStatus;
-
-  AGrid.RowCount := Length(GameStatus.Items);
+  AGrid.RowCount := Length(AGameReport.Items);
   AGrid.BeginUpdate;
   try
     var Row := 0;
-    for Item in GameStatus.Items do
+    for Item in AGameReport.Items do
     begin
       Prefix := IfThen(Item.PlayerStatus = psWinner, 'Winner',
                 IfThen(Item.PlayerStatus = psBankrupt, 'Out', ''));
@@ -188,12 +249,38 @@ begin
   end;
 end;
 
+procedure TForm1.UpdateGameDisplay;
+var
+  GameReport: IGameReport;
+begin
+  GameReport := GameContainer.GameReport;
+  ShowSummaryFmx(StringGrid1, GameReport);
+  lblGameTurns.Text := Format('Turns: %d',[GameContainer.GetTurnCounter]);
+  lblGameRounds.Text := Format('Rounds: %d',[GameContainer.GetRoundCounter]);
+  lblTurns.Text := GameContainer.GetTurnCounter.ToString;
+  lblRounds.Text := GameContainer.GetRoundCounter.ToString;
+
+  btnPlayGame.Enabled := GameContainer.GameState <> gsActive;
+  sbtnMaxTurns.Enabled := GameContainer.GameState <> gsActive;
+  btnCompleteGame.Enabled := GameContainer.GameState = gsActive;
+end;
+
 procedure TForm1.FormCreate(Sender: TObject);
 begin
   TabControl1.Align := TAlignLayout.Client;
   Memo1.Align := TAlignLayout.Client;
   StringGrid1.Align := TAlignLayout.Client;
+
+  lblGameTurns.Text := 'Click on Play Game ..';
+  lblGameRounds. Text := 'Click on Start Game';
   BuildStatusGrid(StringGrid1);
+  btnPlayTurn.Text := 'Start Game';
+
+  FGameOnLog :=
+    procedure(const Message: string)
+    begin
+      Memo1.Lines.Add(Message)
+    end;
 end;
 
 end.

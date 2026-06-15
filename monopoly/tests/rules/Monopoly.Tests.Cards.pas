@@ -37,7 +37,7 @@ type
     procedure GiftFromPlayersSkipsBankruptPlayers;
 
     [Test]
-    procedure GetOutOfJailCardStaysWithPlayerUntilUsed;
+    procedure GetOutOfJailCard_StaysWithPlayer;
 
     [Test]
     procedure GoBack3CanTriggerRecursiveLanding;
@@ -67,7 +67,9 @@ begin
   FGame.Players[0].Position := 7;
   FGame.Players[1].AddProperites(FGame.Board, [15, 25]);
   FGame.SetDecks(
-    [ TMonopolyCard.Create( ctAdvanceNearestRailroad, 'n/a' ) ], []);
+    [ TMonopolyCard.Create( ctAdvanceNearestRailroad, 'n/a' ) ],
+    [],
+    False);
 
   // Act
   LandingRules(FGame, FTransations, TRentOptions.None);
@@ -87,7 +89,8 @@ begin
   FGame.SetLastRoll(TDiceRoll.Create(3, 4));
   FGame.SetDecks(
     [ TMonopolyCard.Create(ctAdvanceNearestUtility,'n/a') ],
-    []);
+    [],
+    False);
 
   // Act
   LandingRules(FGame, FTransations, TRentOptions.None);
@@ -105,7 +108,8 @@ begin
   FGame.Players[0].Position := 7;
   FGame.SetDecks(
     [ TMonopolyCard.Create(ctCollect, 'n/a', 200) ],
-    []);
+    [],
+    False);
 
   // Act
   LandingRules(FGame, FTransations, TRentOptions.None);
@@ -123,7 +127,8 @@ begin
   FGame.Players[0].Position := 17;
   FGame.SetDecks(
     [],
-    [ TMonopolyCard.Create(ctCollect, 'n/a', 100) ]);
+    [ TMonopolyCard.Create(ctCollect, 'n/a', 100) ],
+    False);
 
   // Act
   LandingRules(FGame, FTransations, TRentOptions.None);
@@ -142,7 +147,7 @@ begin
   FGame.Players[2].IsBankrupt := True;
   FGame.SetDecks(
     [],
-    [TMonopolyCard.Create(ctGiftFromPlayers, 'n/a', 10)]);
+    [TMonopolyCard.Create(ctGiftFromPlayers, 'n/a', 10)], False);
 
   // Act
   LandingRules(FGame, FTransations, TRentOptions.None);
@@ -153,16 +158,15 @@ begin
   Assert.AreEqual(1500, FGame.Players[2].Money);
 end;
 
-procedure TCardRulesTests.GetOutOfJailCardStaysWithPlayerUntilUsed;
-var
-  JailResult: TJailResult;
+procedure TCardRulesTests.GetOutOfJailCard_StaysWithPlayer;
 begin
   // Arrange
   FGame.StartGame(['Alice', 'Bob'], MAX_ROUNDS);
   FGame.Players[0].Position := 17;
   FGame.SetDecks(
     [],
-    [TMonopolyCard.Create(ctGetOutJail, 'n/a')]
+    [TMonopolyCard.Create(ctGetOutJail, 'n/a')],
+    False
   );
 
   // Act
@@ -171,18 +175,6 @@ begin
   // Assert
   Assert.AreEqual(1, FGame.Players[0].GetOutOfJailCards.Count);
   Assert.AreEqual(0, FGame.CommunityChestDeck.DiscardedCount);
-
-  FGame.Players[0].IsInJail := True;
-
-  // Act
-  JailResult := JailRules(FGame, FTransations);
-
-  // Assert
-  Assert.IsTrue(JailResult.CanMove);
-  Assert.IsFalse(FGame.Players[0].IsInJail);
-  Assert.AreEqual(0, FGame.Players[0].GetOutOfJailCards.Count);
-  Assert.AreEqual(1, FGame.CommunityChestDeck.DiscardedCount);
-  Assert.AreEqual(1500, FGame.Players[0].Money);
 end;
 
 procedure TCardRulesTests.GiftFromPlayersCanBankruptAnotherPlayerAndTransferAssets;
@@ -194,7 +186,8 @@ begin
   FGame.Players[1].AddProperites(FGame.Board, [1]);
   FGame.SetDecks(
     [],
-    [TMonopolyCard.Create(ctGiftFromPlayers, 'n/a', 10)]);
+    [TMonopolyCard.Create(ctGiftFromPlayers, 'n/a', 10)],
+    False);
 
   // Act
   LandingRules(FGame, FTransations, TRentOptions.None);
@@ -215,7 +208,8 @@ begin
   FGame.Players[0].Position := 36;
   FGame.SetDecks(
     [ TMonopolyCard.Create(ctGoBack3, 'n/a') ],
-    [ TMonopolyCard.Create(ctCollect, 'n/a', 200) ]
+    [ TMonopolyCard.Create(ctCollect, 'n/a', 200) ],
+    False
   );
 
   // Act
@@ -237,7 +231,8 @@ begin
   FGame.Players[0].AddProperites(FGame.Board, [1]);
   FGame.SetDecks(
     [],
-    [TMonopolyCard.Create(ctPay, 'n/a', 50)]
+    [TMonopolyCard.Create(ctPay, 'n/a', 50)],
+    False
   );
 
   // Act
@@ -259,7 +254,8 @@ begin
   FGame.Players[0].AddProperites(FGame.Board, [1]);
   FGame.SetDecks(
     [],
-    [ TMonopolyCard.Create(ctPayEachPlayer, '', 50) ]
+    [ TMonopolyCard.Create(ctPayEachPlayer, '', 50) ],
+    False
   );
 
   // Act

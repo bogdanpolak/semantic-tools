@@ -9,7 +9,7 @@ The included Monopoly game implementation is example code for tooling and demons
 ## Contents
 
 - [cli/src/SourceLens.dpr](cli/src/SourceLens.dpr) — command-line analyzer that extracts method-level metrics from Delphi source (primary tooling example).
-- [monopoly/src/MonopolyConsole.dpr](monopoly/src/MonopolyConsole.dpr) — sample console application implementing a Monopoly simulation (example/testbed).
+- [monopoly/src/MonopolyFmx.dpr](monopoly/src/MonopolyFmx.dpr) — sample FMX application implementing a Monopoly simulation (example/testbed).
 - [monopoly/tests/Monopoly.Tests.dpr](monopoly/tests/Monopoly.Tests.dpr) — DUnitX tests for the sample code and helpers.
 
 ## Purpose

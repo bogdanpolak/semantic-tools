@@ -371,7 +371,7 @@ begin
   Assert.IsFalse(IsOK);
   Assert.AreEqual('Bob wins the game.', FGame.TermiantionReason);
   Assert.AreEqual('Bob', FGame.Players[1].Name);
-  Assert.isFalse( FGame.IsGameActive);
+  Assert.AreEqual(gsFinished, FGame.Status);
 end;
 
 procedure TTypeTests.RollDiceUsesInjectedDiceRoller;

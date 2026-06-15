@@ -38,7 +38,7 @@ end;
 
 function CreateMonopolyServices : IMonopolyServices;
 begin
-  Result := CreateMonoployServices;
+  Result := CreateMonopolyServices;
 end;
 
 

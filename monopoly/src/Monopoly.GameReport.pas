@@ -1,4 +1,4 @@
-unit Monopoly.GameStatus;
+unit Monopoly.GameReport;
 
 interface
 
@@ -13,7 +13,7 @@ uses
 type
   TPlayerStatus = (psWinner, psActive, psBankrupt);
 
-  IGameStatusItem = interface
+  IGameReportItem = interface
     ['{4EFB1C51-36B0-4A2E-8B7A-74F8C2BDB60D}']
     function PlayerStatus: TPlayerStatus;
     function PlayerName: string;
@@ -25,23 +25,23 @@ type
     function PropertyList: string;
   end;
 
-  TGameStatusItems = TArray<IGameStatusItem>;
+  TGameReportItems = TArray<IGameReportItem>;
 
-  IGameStatus = interface
+  IGameReport = interface
     ['{66B21296-30F6-4CEB-B498-140A55E18A1B}']
     function CurrentPlayerName: string;
-    function IsGameActive: boolean;
-    function Items: TGameStatusItems;
+    function Status: TGameState;
+    function Items: TGameReportItems;
     function Rounds: integer;
     function Turns: integer;
   end;
 
-function GetGameStatus(Game: TGame): IGameStatus;
+function GetGameReport(Game: TGame): IGameReport;
 
 implementation
 
 type
-  TGameStatusItem = class(TInterfacedObject, IGameStatusItem)
+  TGameStatusItem = class(TInterfacedObject, IGameReportItem)
   private
     FPlayerStatus: TPlayerStatus;
     FPlayerName: string;
@@ -71,35 +71,77 @@ type
     function PropertyList: string;
   end;
 
-  TGameStatus = class(TInterfacedObject, IGameStatus)
+  TGameStatus = class(TInterfacedObject, IGameReport)
   private
-    FItems: TGameStatusItems;
+    FItems: TGameReportItems;
     FTurnNumber: integer;
     FRoundNumber: integer;
     FMaxRounds: integer;
     FCurrentPlayerName: string;
-    FIsGameActive: boolean;
+    FStatus: TGameState;
+    FPlayerMoneyComparer: IComparer<TPlayer>;
+    FTileComparer: IComparer<TTile>;
+    function BuildPropertyList(
+      const Player: TPlayer;
+      const ABoard: TBoard
+      ): string;
+    function BuildGameStatusItems(Game: TGame): TGameReportItems;
   public
     constructor Create(Game: TGame);
     function CurrentPlayerName: string;
-    function IsGameActive: boolean;
-    function Items: TGameStatusItems;
+    function Status: TGameState;
+    function Items: TGameReportItems;
     function Rounds: integer;
     function Turns: integer;
   end;
 
-function BuildPropertyList(const Player: TPlayer): string;
+function TGameStatus.BuildPropertyList(
+  const Player: TPlayer;
+  const ABoard: TBoard
+  ): string;
 var
-  PropertyId: integer;
+  Id: integer;
+  PlayerCards: TList<TTile>;
+  PrevoiusCategory: string;
+  TileCategory: string;
 begin
+  if (Player.PropertyIds.Count = 0) then
+    Exit('');
+
   Result := '';
-  for PropertyId in Player.PropertyIds do
-  begin
-    if Result <> '' then
+  PlayerCards := TList<TTile>.Create();
+  try
+    for Id in Player.PropertyIds do
     begin
-      Result := Result + ', ';
+      PlayerCards.Add(ABoard.TileById(Id));
     end;
-    Result := Result + IntToStr(PropertyId);
+
+    PlayerCards.Sort(FTileComparer);
+
+    PrevoiusCategory := '';
+    for var Tile in PlayerCards do
+    begin
+      if Tile.TileType = ttRailroad then
+      begin
+        TileCategory := 'Railroad'
+      end
+      else if Tile.TileType = ttUtility then
+      begin
+        TileCategory := 'Utility'
+      end
+      else
+        TileCategory := Format('Property(%s)',[Tile.Color]);
+      var Separator := IfThen(PrevoiusCategory<>TileCategory, ' | ', ', ');
+      PrevoiusCategory := TileCategory;
+      if Result <> '' then
+      begin
+        Result := Result + Separator;
+      end;
+      Result := Result + IntToStr(Tile.Id);
+    end;
+
+  finally
+    PlayerCards.Free;
   end;
 end;
 
@@ -164,7 +206,7 @@ begin
   Result := FPropertyList;
 end;
 
-function CreateGameStatusItems(Game: TGame): TGameStatusItems;
+function TGameStatus.BuildGameStatusItems(Game: TGame): TGameReportItems;
 var
   Player: TPlayer;
   MaxMoney: integer;
@@ -188,21 +230,14 @@ begin
       SortedPlayers.Add(Player);
     end;
 
-    SortedPlayers.Sort(
-      TComparer<TPlayer>.Construct(
-        function(const Left, Right: TPlayer): Integer
-        begin
-          Result := Right.Money - Left.Money;
-        end
-      )
-    );
+    SortedPlayers.Sort(FPlayerMoneyComparer);
 
     SetLength(Result, SortedPlayers.Count);
 
     for Index := 0 to SortedPlayers.Count - 1 do
     begin
       Player := SortedPlayers[Index];
-      if Player.Money = MaxMoney then
+      if (Game.Status = gsFinished) and (Player.Money = MaxMoney) then
         PlayerStatus := psWinner
       else if Player.IsBankrupt then
         PlayerStatus := psBankrupt
@@ -214,7 +249,7 @@ begin
         Player.Name,
         Player.Money,
         Player.PropertyIds.Count,
-        BuildPropertyList(Player),
+        BuildPropertyList(Player, Game.Board),
         Game.Board.CountHousesOwnedBy(Player),
         Game.Board.CountHotelsOwnedBy(Player)
       );
@@ -229,9 +264,30 @@ var
   Player: TPlayer;
 begin
   inherited Create;
+  FPlayerMoneyComparer := TComparer<TPlayer>.Construct(
+      function(const Left, Right: TPlayer): Integer
+      begin
+        Result := Right.Money - Left.Money;
+      end
+    );
+  FTileComparer := TComparer<TTile>.Construct(
+      function(const Left, Right: TTile): Integer
+      begin
+        var LeftValue :=
+          IfThen(Left.TileType = ttRailroad, Left.Id,
+          IfThen(Left.TileType = ttUtility, 100+Left.Id,
+            200+Left.id));
+        var RightValue :=
+          IfThen(Right.TileType = ttRailroad, Right.Id,
+          IfThen(Right.TileType = ttUtility, 100+Right.Id,
+            200+Right.id));
+        Result := LeftValue - RightValue;
+      end
+    );
+
   Player := Game.CurrentPlayer;
 
-  FItems := CreateGameStatusItems(Game);
+  FItems := BuildGameStatusItems(Game);
   FTurnNumber := Game.TurnNumber;
   FRoundNumber := Game.RoundNumber;
   FMaxRounds := Game.MaxRounds;
@@ -239,7 +295,7 @@ begin
   begin
     FCurrentPlayerName := Player.Name;
   end;
-  FIsGameActive := Game.IsGameActive;
+  FStatus := Game.Status;
 end;
 
 function TGameStatus.CurrentPlayerName: string;
@@ -247,12 +303,12 @@ begin
   Result := FCurrentPlayerName;
 end;
 
-function TGameStatus.IsGameActive: boolean;
+function TGameStatus.Status: TGameState;
 begin
-  Result := FIsGameActive;
+  Result := FStatus;
 end;
 
-function TGameStatus.Items: TGameStatusItems;
+function TGameStatus.Items: TGameReportItems;
 begin
   Result := FItems;
 end;
@@ -267,7 +323,7 @@ begin
   Result := FTurnNumber;
 end;
 
-function GetGameStatus(Game: TGame): IGameStatus;
+function GetGameReport(Game: TGame): IGameReport;
 begin
   if Game = nil then
   begin

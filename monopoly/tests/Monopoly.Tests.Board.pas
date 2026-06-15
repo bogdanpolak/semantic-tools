@@ -12,7 +12,6 @@ type
   TBoardTests = class
   private
     FGame: TGame;
-    FBoard: TBoard;
   public
     [Setup]
     procedure Setup;
@@ -59,7 +58,6 @@ uses
 procedure TBoardTests.Setup;
 begin
   FGame := TGame.Create();
-  FBoard := FGame.Board;
 end;
 
 procedure TBoardTests.TearDown;
@@ -70,22 +68,23 @@ end;
 procedure TBoardTests.CountPlayerBuildingsUsesOwnedPropertyIds;
 begin
   FGame.StartGame(['Alice'], MAX_ROUNDS);
-  FGame.Players[0].AddProperites(FBoard, [1, 3, 34]);
-  FBoard[1].Houses := 2;
-  FBoard[3].Houses := 1;
-  FBoard[34].HasHotel := True;
+  FGame.Players[0].AddProperites(FGame.Board, [1, 3, 34]);
+  FGame.Board[1].Houses := 2;
+  FGame.Board[3].Houses := 1;
+  FGame.Board[34].HasHotel := True;
 
-  Assert.AreEqual(3, FBoard.CountHousesOwnedBy(FGame.Players[0]));
-  Assert.AreEqual(1, FBoard.CountHotelsOwnedBy(FGame.Players[0]));
+  Assert.AreEqual(3, FGame.Board.CountHousesOwnedBy(FGame.Players[0]));
+  Assert.AreEqual(1, FGame.Board.CountHotelsOwnedBy(FGame.Players[0]));
 end;
 
 procedure TBoardTests.CountOwnedTilesOfTypeCountsMatchingOwnedTiles;
 begin
   FGame.StartGame(['Alice', 'Bob'], MAX_ROUNDS);
-  FGame.Players[0].AddProperites(FBoard, [5, 15, 28]);
+  var Board := FGame.Board;
+  FGame.Players[0].AddProperites(Board, [5, 15, 28]);
 
-  Assert.AreEqual(2, FBoard.CountOwnedTilesOfType(FGame.Players[0], ttRailroad));
-  Assert.AreEqual(1, FBoard.CountOwnedTilesOfType(FGame.Players[0], ttUtility));
+  Assert.AreEqual(2, Board.CountOwnedTilesOfType(FGame.Players[0], ttRailroad));
+  Assert.AreEqual(1, Board.CountOwnedTilesOfType(FGame.Players[0], ttUtility));
 end;
 
 procedure TBoardTests.CountOwnedTilesOfTypeRaisesForUnsupportedTileType;
@@ -95,7 +94,7 @@ begin
   Assert.WillRaise(
     procedure
     begin
-      FBoard.CountOwnedTilesOfType(FGame.Players[0], ttProperty);
+      FGame.Board.CountOwnedTilesOfType(FGame.Players[0], ttProperty);
     end,
     Exception
   );
@@ -104,21 +103,23 @@ end;
 procedure TBoardTests.ColorGroupQueriesReflectOwnershipAndDevelopment;
 begin
   FGame.StartGame(['Alice', 'Bob'], MAX_ROUNDS);
-  FGame.Players[0].AddProperites(FBoard, [1, 3]);
+  var Board := FGame.Board;
+  var Alice := FGame.Players[0];
+  FGame.Players[0].AddProperites(Board, [1, 3]);
 
-  Assert.AreEqual(2, FBoard.CountTilesInColorGroup(FBoard[1]));
-  Assert.IsTrue(FBoard.AreColorGroupTilesOwnedBy(FBoard[1], FGame.Players[0]));
-  Assert.IsFalse(FBoard.AreColorGroupTilesOwnedBy(FBoard[1], FGame.Players[1]));
-  Assert.AreEqual(0, FBoard.LowestHouseCountInColorGroup(FBoard[1], FGame.Players[0]));
-  Assert.IsFalse(FBoard.IsColorGroupFullyBuilt(FBoard[1], FGame.Players[0]));
-  Assert.IsFalse(FBoard.HasBuildingsInColorGroup(FBoard[1], FGame.Players[0]));
+  Assert.AreEqual(2, Board.CountTilesInColorGroup(Board[1]));
+  Assert.AreEqual(True, Board.AreColorGroupTilesOwnedBy(Board[1], Alice));
+  Assert.AreEqual(False, Board.AreColorGroupTilesOwnedBy(Board[1], FGame.Players[1]));
+  Assert.AreEqual(0, Board.LowestHouseCountInColorGroup(Board[1], Alice));
+  Assert.AreEqual(False, Board.IsColorGroupFullyBuilt(Board[1], Alice));
+  Assert.AreEqual(False, Board.HasBuildingsInColorGroup(Board[1], Alice));
 
-  FBoard[1].Houses := 4;
-  FBoard[3].Houses := 4;
+  FGame.Board[1].Houses := 4;
+  FGame.Board[3].Houses := 4;
 
-  Assert.AreEqual(4, FBoard.LowestHouseCountInColorGroup(FBoard[1], FGame.Players[0]));
-  Assert.IsTrue(FBoard.IsColorGroupFullyBuilt(FBoard[1], FGame.Players[0]));
-  Assert.IsTrue(FBoard.HasBuildingsInColorGroup(FBoard[1], FGame.Players[0]));
+  Assert.AreEqual(4, FGame.Board.LowestHouseCountInColorGroup(Board[1], Alice));
+  Assert.AreEqual(True, Board.IsColorGroupFullyBuilt(Board[1], Alice));
+  Assert.AreEqual(True, Board.HasBuildingsInColorGroup(Board[1], Alice));
 end;
 
 procedure TBoardTests.CurrentTileOwnerReturnsOwnerForPlayersPosition;
@@ -127,9 +128,9 @@ var
 begin
   FGame.StartGame(['Alice', 'Bob'], MAX_ROUNDS);
   FGame.Players[0].Position := 1;
-  FGame.Players[1].AddProperites(FBoard, [1]);
+  FGame.Players[1].AddProperites(FGame.Board, [1]);
 
-  Owner := FBoard.CurrentPlayerTileOwner;
+  Owner := FGame.Board.CurrentPlayerTileOwner;
 
   Assert.IsNotNull(Owner);
   Assert.AreEqual(FGame.Players[1].Id, Owner.Id);
@@ -137,7 +138,8 @@ end;
 
 procedure TBoardTests.FindTilePositionByNameReturnsMatchingIndex;
 begin
-  Assert.AreEqual(12, FBoard.FindTilePositionByName('Electric Company'));
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
+  Assert.AreEqual(12, FGame.Board.FindTilePositionByName('Electric Company'));
 end;
 
 procedure TBoardTests.GetPlayerTileReturnsTileAtPlayersPosition;
@@ -147,7 +149,7 @@ begin
   FGame.StartGame(['Alice'], MAX_ROUNDS);
   FGame.Players[0].Position := 39;
 
-  Tile := FBoard.TileAtPlayerPosition(FGame.Players[0]);
+  Tile := FGame.Board.TileAtPlayerPosition(FGame.Players[0]);
 
   Assert.AreEqual('Boardwalk', Tile.Name);
   Assert.AreEqual(ttProperty, Tile.TileType);
@@ -157,7 +159,9 @@ procedure TBoardTests.GetTileByIdReturnsMatchingTile;
 var
   Tile: TTile;
 begin
-  Tile := FBoard.TileById(15);
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
+
+  Tile := FGame.Board.TileById(15);
 
   Assert.AreEqual('Pennsylvania Railroad', Tile.Name);
   Assert.AreEqual(ttRailroad, Tile.TileType);
@@ -166,9 +170,9 @@ end;
 procedure TBoardTests.HasMonopolyDetectsTwoPropertyColorSet;
 begin
   FGame.StartGame(['Alice'], MAX_ROUNDS);
-  FGame.Players[0].AddProperites(FBoard, [1, 3]);
+  FGame.Players[0].AddProperites(FGame.Board, [1, 3]);
 
-  Assert.IsTrue(FBoard.HasPropertyMonopoly(FBoard[1], FGame.Players[0]));
+  Assert.IsTrue(FGame.Board.HasPropertyMonopoly(FGame.Board[1], FGame.Players[0]));
 end;
 
 procedure TBoardTests.OtherActivePlayersSkipsExcludedAndBankruptPlayers;
@@ -178,7 +182,7 @@ begin
   FGame.StartGame(['Alice', 'Bob', 'Charlie'], MAX_ROUNDS);
   FGame.Players[1].IsBankrupt := True;
 
-  OtherPlayers := FBoard.ActivePlayersExcept(FGame.Players[0]);
+  OtherPlayers := FGame.Board.ActivePlayersExcept(FGame.Players[0]);
 
   Assert.AreEqual(1, Length(OtherPlayers));
   Assert.AreEqual('Charlie', OtherPlayers[0].Name);

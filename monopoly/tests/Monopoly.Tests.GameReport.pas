@@ -1,10 +1,10 @@
-unit Monopoly.Tests.GameStatus;
+unit Monopoly.Tests.GameReport;
 
 interface
 
 uses
   DUnitX.TestFramework,
-  Monopoly.GameStatus,
+  Monopoly.GameReport,
   Monopoly.Types;
 
 type
@@ -31,10 +31,11 @@ uses
 
 procedure TGameStatusTests.GetGameStatusReturnsReportRowsAndMetadata;
 var
-  Status: IGameStatus;
-  Items: TGameStatusItems;
+  GameStatus: IGameReport;
+  Items: TGameReportItems;
 begin
-  FGame.StartGame(['Alice', 'Bob', 'Charlie'], 100, False);
+  var MaxRounds := 4;
+  FGame.StartGame(['Alice', 'Bob', 'Charlie'], MaxRounds, False);
   FGame.Players[0].Money := 900;
   FGame.Players[1].Money := 0;
   FGame.Players[1].IsBankrupt := True;
@@ -45,18 +46,17 @@ begin
   FGame.Board[3].HasHotel := True;
   FGame.DiceRoller := CreateFixedDiceRoller([TDiceRoll.Create(1, 2)]);
 
-  for var I := 1 to 11 do
+  while (FGame.Status <> gsFinished) do
   begin
     FGame.NextTurn;
   end;
 
-  Status := GetGameStatus(FGame);
-  Items := Status.Items;
+  GameStatus := GetGameReport(FGame);
+  Items := GameStatus.Items;
 
-  Assert.AreEqual(12, Status.Turns);
-  Assert.AreEqual(6, Status.Rounds);
-  Assert.AreEqual('Charlie', Status.CurrentPlayerName);
-  Assert.IsTrue(Status.IsGameActive);
+  Assert.AreEqual(8, GameStatus.Turns);  // Ignoring Bon - bankrupt player 2x MaxRounds
+  Assert.AreEqual(4, GameStatus.Rounds);
+  Assert.AreEqual('Alice', GameStatus.CurrentPlayerName);
 
   Assert.AreEqual(3, Length(Items));
 
@@ -72,7 +72,7 @@ begin
   Assert.AreEqual('Alice', Items[1].PlayerName);
   Assert.AreEqual(900, Items[1].Money);
   Assert.AreEqual(3, Items[1].PropertyCount);
-  Assert.AreEqual('1, 3, 5', Items[1].PropertyList);
+  Assert.AreEqual('5 | 1, 3', Items[1].PropertyList);
   Assert.AreEqual(4, Items[1].HouseCount);
   Assert.AreEqual(1, Items[1].HotelCount);
 

@@ -14,8 +14,8 @@ uses
   DUnitX.TestFramework,
   Monopoly.Tests.Board in 'Monopoly.Tests.Board.pas',
   Monopoly.Tests.Factories in 'Monopoly.Tests.Factories.pas',
-  Monopoly.Tests.PropertyDevelopment in 'Monopoly.Tests.PropertyDevelopment.pas',
-  Monopoly.Tests.GameStatus in 'Monopoly.Tests.GameStatus.pas',
+  Monopoly.Tests.Decisions in 'rules\Monopoly.Tests.Decisions.pas',
+  Monopoly.Tests.GameReport in 'Monopoly.Tests.GameReport.pas',
   Monopoly.Tests.PlayTurn in 'Monopoly.Tests.PlayTurn.pas',
   Monopoly.Tests.Transactions in 'Monopoly.Tests.Transactions.pas',
   Monopoly.Tests.Utils in 'Monopoly.Tests.Utils.pas',
@@ -23,18 +23,19 @@ uses
   Monopoly.Tests.Jail in 'rules\Monopoly.Tests.Jail.pas',
   Monopoly.Tests.Landing in 'rules\Monopoly.Tests.Landing.pas',
   Monopoly.Tests.Cards in 'rules\Monopoly.Tests.Cards.pas',
-  Monopoly.Factories in '..\src\Monopoly.Factories.pas',
-  Monopoly.GameStatus in '..\src\Monopoly.GameStatus.pas',
+  Monopoly.Tests.Types.Deck in 'Monopoly.Tests.Types.Deck.pas',
+  Monopoly.Tests.Types.Game in 'Monopoly.Tests.Types.Game.pas',
   Monopoly.Types in '..\src\Monopoly.Types.pas',
   Monopoly.Utils in '..\src\Monopoly.Utils.pas',
+  Monopoly.Factories in '..\src\Monopoly.Factories.pas',
+  Monopoly.GameReport in '..\src\Monopoly.GameReport.pas',
   Monopoly.CompositionRoot in '..\src\Monopoly.CompositionRoot.pas',
   Monopoly.Transactions in '..\src\Monopoly.Transactions.pas',
-  Monopoly.Rules.Cards in '..\src\rules\Monopoly.Rules.Cards.pas',
   Monopoly.Rules.Jail in '..\src\rules\Monopoly.Rules.Jail.pas',
   Monopoly.Rules.Landing in '..\src\rules\Monopoly.Rules.Landing.pas',
-  Monopoly.Rules.Rent in '..\src\rules\Monopoly.Rules.Rent.pas',
-  Monopoly.Tests.Types.Deck in 'Monopoly.Tests.Types.Deck.pas',
-  Monopoly.Tests.Types.Game in 'Monopoly.Tests.Types.Game.pas';
+  Monopoly.Rules.Decisions in '..\src\rules\Monopoly.Rules.Decisions.pas',
+  Container.Game in '..\src\Container.Game.pas',
+  Monopoly.Tests.Build in 'rules\Monopoly.Tests.Build.pas';
 
 { keep comment here to protect the following conditional from being removed by the IDE when adding a unit }
 {$IFNDEF TESTINSIGHT}

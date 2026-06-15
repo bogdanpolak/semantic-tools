@@ -22,16 +22,19 @@ type
     procedure TearDown;
 
     [Test]
-    procedure JailRulesPaysFineWhenPlayerCanAffordIt;
+    procedure TryGetOutJail_PaysFineWhenPlayerCanAffordIt;
 
     [Test]
-    procedure JailRulesKeepsPlayerInJailAfterFailedRoll;
+    procedure TryGetOutJail_KeepsPlayerInJailAfterFailedRoll;
 
     [Test]
-    procedure JailRulesReleasesPlayerOnDoubles;
+    procedure TryGetOutJail_ReleasesPlayerOnDoubles;
 
     [Test]
-    procedure JailRulesMarksPlayerBankruptAfterThirdFailedRollWithoutCash;
+    procedure TryGetOutJail_BankruptAfterThirdFailedRollWithoutCash;
+
+    [Test]
+    procedure TryGetOutJail_GetOutOfJailWhenHavingCard;
   end;
 
 implementation
@@ -40,28 +43,61 @@ uses
   Monopoly.Rules.Jail,
   Monopoly.Tests.Helpers;
 
-procedure TJailRulesTests.JailRulesKeepsPlayerInJailAfterFailedRoll;
+procedure TJailRulesTests.TryGetOutJail_PaysFineWhenPlayerCanAffordIt;
 var
-  ResultInfo: TJailResult;
+  IsReleasedFromJail: boolean;
+  JailRoll: TDiceRoll;
+begin
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
+  FGame.Players[0].IsInJail := True;
+
+  IsReleasedFromJail := TryGetOutJail(FGame, FTransations, JailRoll);
+
+  Assert.IsTrue(IsReleasedFromJail);
+  Assert.IsFalse(FGame.Players[0].IsInJail);
+  Assert.AreEqual(1450, FGame.Players[0].Money);
+end;
+
+procedure TJailRulesTests.TryGetOutJail_KeepsPlayerInJailAfterFailedRoll;
+var
+  IsReleasedFromJail: boolean;
+  JailRoll: TDiceRoll;
 begin
   FGame.StartGame(['Alice'], MAX_ROUNDS);
   FGame.DiceRoller := CreateFixedDiceRoller([TDiceRoll.Create(2, 3)]);
   FGame.Players[0].IsInJail := True;
   FGame.Players[0].Money := 30;
 
-  ResultInfo := JailRules(FGame, FTransations);
+  IsReleasedFromJail := TryGetOutJail(FGame, FTransations, JailRoll);
 
-  Assert.IsFalse(ResultInfo.CanMove);
-  Assert.IsTrue(ResultInfo.HasRoll);
-  Assert.IsTrue(ResultInfo.UsedJailRoll);
+  Assert.IsFalse(IsReleasedFromJail);
   Assert.IsTrue(FGame.Players[0].IsInJail);
   Assert.AreEqual(1, FGame.Players[0].FailedJailRolls);
   Assert.AreEqual(30, FGame.Players[0].Money);
 end;
 
-procedure TJailRulesTests.JailRulesMarksPlayerBankruptAfterThirdFailedRollWithoutCash;
+procedure TJailRulesTests.TryGetOutJail_ReleasesPlayerOnDoubles;
 var
-  ResultInfo: TJailResult;
+  IsReleasedFromJail: boolean;
+  JailRoll: TDiceRoll;
+begin
+  FGame.StartGame(['Alice'], MAX_ROUNDS);
+  FGame.DiceRoller := CreateFixedDiceRoller([TDiceRoll.Create(4, 4)]);
+  FGame.Players[0].IsInJail := True;
+  FGame.Players[0].Money := 30;
+
+  IsReleasedFromJail := TryGetOutJail(FGame, FTransations, JailRoll);
+
+  Assert.IsTrue(IsReleasedFromJail);
+  Assert.AreEqual(False, FGame.Players[0].IsInJail);
+  Assert.AreEqual(0, FGame.Players[0].FailedJailRolls);
+  Assert.AreEqual(30, FGame.Players[0].Money);
+  Assert.AreEqual(8, JailRoll.Total);
+end;
+
+procedure TJailRulesTests.TryGetOutJail_BankruptAfterThirdFailedRollWithoutCash;
+var
+  JailRoll: TDiceRoll;
 begin
   FGame.StartGame(['Alice'], MAX_ROUNDS);
   FGame.DiceRoller := CreateFixedDiceRoller([TDiceRoll.Create(2, 3)]);
@@ -70,51 +106,37 @@ begin
   FGame.Players[0].FailedJailRolls := 2;
   FGame.Players[0].AddProperites(FGame.Board, [1]);
 
-  ResultInfo := JailRules(FGame, FTransations);
+  TryGetOutJail(FGame, FTransations, JailRoll);
 
-  Assert.IsFalse(ResultInfo.CanMove);
-  Assert.IsFalse(ResultInfo.HasRoll);
-  Assert.IsTrue(ResultInfo.UsedJailRoll);
   Assert.IsTrue(FGame.Players[0].IsBankrupt);
-  Assert.IsFalse(FGame.Players[0].IsInJail);
   Assert.AreEqual(0, FGame.Players[0].PropertyIds.Count);
   Assert.AreEqual(NO_OWNER_ID, FGame.Board[1].OwnerId);
 end;
 
-procedure TJailRulesTests.JailRulesPaysFineWhenPlayerCanAffordIt;
+procedure TJailRulesTests.TryGetOutJail_GetOutOfJailWhenHavingCard;
 var
-  ResultInfo: TJailResult;
+  IsReleasedFromJail: boolean;
+  JailRoll: TDiceRoll;
 begin
-  FGame.StartGame(['Alice'], MAX_ROUNDS);
+  // Arrange
+  FGame.StartGame(['Alice', 'Bob'], MAX_ROUNDS);
+  FGame.SetDecks([], [], False);
+  FGame.Players[0].Position := 10;
+  FGame.Players[0].GetOutOfJailCards.Add(
+    THeldJailCard.Create(
+      TMonopolyCard.Create(ctGetOutJail, 'Get Out of Jail Free'),
+      FGame.CommunityChestDeck));
   FGame.Players[0].IsInJail := True;
 
-  ResultInfo := JailRules(FGame, FTransations);
+  // Act
+  IsReleasedFromJail := TryGetOutJail(FGame, FTransations, JailRoll);
 
-  Assert.IsTrue(ResultInfo.CanMove);
-  Assert.IsFalse(ResultInfo.HasRoll);
-  Assert.IsFalse(ResultInfo.UsedJailRoll);
-  Assert.IsFalse(FGame.Players[0].IsInJail);
-  Assert.AreEqual(1450, FGame.Players[0].Money);
-end;
-
-procedure TJailRulesTests.JailRulesReleasesPlayerOnDoubles;
-var
-  ResultInfo: TJailResult;
-begin
-  FGame.StartGame(['Alice'], MAX_ROUNDS);
-  FGame.DiceRoller := CreateFixedDiceRoller([TDiceRoll.Create(4, 4)]);
-  FGame.Players[0].IsInJail := True;
-  FGame.Players[0].Money := 30;
-
-  ResultInfo := JailRules(FGame, FTransations);
-
-  Assert.IsTrue(ResultInfo.CanMove);
-  Assert.IsTrue(ResultInfo.HasRoll);
-  Assert.IsTrue(ResultInfo.UsedJailRoll);
-  Assert.IsFalse(FGame.Players[0].IsInJail);
-  Assert.AreEqual(0, FGame.Players[0].FailedJailRolls);
-  Assert.AreEqual(30, FGame.Players[0].Money);
-  Assert.AreEqual(8, ResultInfo.Roll.Total);
+  // Assert
+  Assert.AreEqual(True, IsReleasedFromJail);
+  Assert.AreEqual(False, FGame.Players[0].IsInJail);
+  Assert.AreEqual(0, FGame.Players[0].GetOutOfJailCards.Count);
+  Assert.AreEqual(1, FGame.CommunityChestDeck.DiscardedCount);
+  Assert.AreEqual(1500, FGame.Players[0].Money);
 end;
 
 procedure TJailRulesTests.Setup;

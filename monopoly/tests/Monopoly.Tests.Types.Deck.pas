@@ -37,7 +37,9 @@ begin
       TMonopolyCard.Create(ctCollect, 'Collect $50', 50),
       TMonopolyCard.Create(ctPay, 'Pay $15', 15),
       TMonopolyCard.Create(ctAdvance, 'Advance to Go (Collect $200)', 0, 'Go')
-    ], False);
+    ],
+    False,
+    'Test Deck');
 
   FirstCard := FDeck.DrawCard;
   SecondCard := FDeck.DrawCard;

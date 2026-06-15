@@ -6,30 +6,11 @@ uses
   Monopoly.Transactions,
   Monopoly.Types;
 
-const
-  JAIL_FINE = 50;
-  JAIL_TILE_ID = 10;
-  MAX_FAILED_JAIL_ROLLS = 3;
-
-type
-  TJailResult = record
-    CanMove: boolean;
-    Roll: TDiceRoll;
-    HasRoll: boolean;
-    UsedJailRoll: boolean;
-    class function Create(
-      ACanMove: boolean;
-      const ARoll: TDiceRoll;
-      AHasRoll: boolean;
-      AUsedJailRoll: boolean
-    ): TJailResult; static;
-  end;
-
-function JailRules(
+function TryGetOutJail(
   const AGame: TGame;
-  const ATransactions: ITransactionService
-  ): TJailResult;
-procedure SendCurrentPlayerToJail(Game: TGame);
+  const ATransactions: ITransactionService;
+  out JailRoll: TDiceRoll
+  ): boolean;
 
 implementation
 
@@ -42,20 +23,17 @@ begin
   Player.FailedJailRolls := 0;
 end;
 
-function JailRules(
+function TryGetOutJail(
   const AGame: TGame;
-  const ATransactions: ITransactionService
-  ): TJailResult;
+  const ATransactions: ITransactionService;
+  out JailRoll: TDiceRoll
+  ): boolean;
 var
   Player: TPlayer;
   JailCard: THeldJailCard;
   Roll: TDiceRoll;
 begin
   Player := AGame.CurrentPlayer;
-  if (Player = nil) or Player.IsBankrupt or not Player.IsInJail then
-  begin
-    Exit(TJailResult.Create(True, Default(TDiceRoll), False, False));
-  end;
 
   if Player.GetOutOfJailCards.Count > 0 then
   begin
@@ -64,7 +42,8 @@ begin
     JailCard.Deck.ReturnCard(JailCard.Card);
     ReleasePlayerFromJail(Player);
     AGame.Log(Format('%s uses a Get Out of Jail Free card.', [Player.Name]));
-    Exit(TJailResult.Create(True, Default(TDiceRoll), False, False));
+    JailRoll := AGame.DiceRoller();
+    Exit(True);
   end;
 
   if Player.Money >= JAIL_FINE then
@@ -72,7 +51,8 @@ begin
     ReleasePlayerFromJail(Player);
     AGame.PayBank(Player, JAIL_FINE);
     AGame.Log(Format('%s pays $50 to get out of jail.', [Player.Name]));
-    Exit(TJailResult.Create(True, Default(TDiceRoll), False, False));
+    JailRoll := AGame.DiceRoller();
+    Exit(True);
   end;
 
   Roll := AGame.RollDice;
@@ -80,7 +60,8 @@ begin
   begin
     ReleasePlayerFromJail(Player);
     AGame.Log(Format('%s rolls doubles and gets out of jail.', [Player.Name]));
-    Exit(TJailResult.Create(True, Roll, True, True));
+    JailRoll := Roll;
+    Exit(True);
   end;
 
   Inc(Player.FailedJailRolls);
@@ -88,49 +69,11 @@ begin
 
   if Player.FailedJailRolls < MAX_FAILED_JAIL_ROLLS then
   begin
-    Exit(TJailResult.Create(False, Roll, True, True));
+    Exit(False);
   end;
 
-  ReleasePlayerFromJail(Player);
-  if Player.Money < JAIL_FINE then
-  begin
-    ATransactions.MarkPlayerBankrupt(Player, AGame.Board, nil, AGame.OnLog);
-    Exit(TJailResult.Create(False, Default(TDiceRoll), False, True));
-  end;
-
-  AGame.PayBank(Player, JAIL_FINE);
-  AGame.Log(Format('%s pays $50 to get out of jail.', [Player.Name]));
-  Result := TJailResult.Create(True, Roll, True, True);
-end;
-
-procedure SendCurrentPlayerToJail(Game: TGame);
-var
-  Player: TPlayer;
-begin
-  Player := Game.CurrentPlayer;
-  if Player = nil then
-  begin
-    Exit;
-  end;
-
-  Game.MovePlayerTo(Player, JAIL_TILE_ID);
-  Player.IsInJail := True;
-  Player.FailedJailRolls := 0;
-end;
-
-{ TJailResult }
-
-class function TJailResult.Create(
-  ACanMove: boolean;
-  const ARoll: TDiceRoll;
-  AHasRoll: boolean;
-  AUsedJailRoll: boolean
-  ): TJailResult;
-begin
-  Result.CanMove := ACanMove;
-  Result.Roll := ARoll;
-  Result.HasRoll := AHasRoll;
-  Result.UsedJailRoll := AUsedJailRoll;
+  ATransactions.MarkPlayerBankrupt(Player, AGame.Board, nil, AGame.OnLog);
+  Exit(False);
 end;
 
 end.

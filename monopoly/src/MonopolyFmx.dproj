@@ -164,20 +164,18 @@
             <Form>Form1</Form>
             <FormType>fmx</FormType>
         </DCCReference>
-        <DCCReference Include="Monopoly.BuildActions.pas"/>
+        <DCCReference Include="Monopoly.Rules.Build.pas"/>
         <DCCReference Include="Monopoly.CompositionRoot.pas"/>
         <DCCReference Include="Monopoly.Factories.pas"/>
-        <DCCReference Include="Monopoly.PropertyDevelopment.pas"/>
+        <DCCReference Include="Monopoly.Rules.Decisions.pas"/>
         <DCCReference Include="Monopoly.System.pas"/>
         <DCCReference Include="Monopoly.Transactions.pas"/>
         <DCCReference Include="Monopoly.Types.pas"/>
         <DCCReference Include="Monopoly.Utils.pas"/>
-        <DCCReference Include="rules\Monopoly.Rules.Cards.pas"/>
         <DCCReference Include="rules\Monopoly.Rules.Jail.pas"/>
         <DCCReference Include="rules\Monopoly.Rules.Landing.pas"/>
-        <DCCReference Include="rules\Monopoly.Rules.Rent.pas"/>
-        <DCCReference Include="Monopoly.GameStatus.pas"/>
-        <DCCReference Include="MainModule.pas"/>
+        <DCCReference Include="Monopoly.GameReport.pas"/>
+        <DCCReference Include="Container.Game.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
