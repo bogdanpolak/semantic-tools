@@ -13,11 +13,15 @@ uses
   DUnitX.Loggers.Console,
   {$ENDIF }
   DUnitX.TestFramework,
+  Tests.SourceLens.CliOptions in 'Tests.SourceLens.CliOptions.pas',
   Tests.SourceLens.DelphiAnalyzer in 'Tests.SourceLens.DelphiAnalyzer.pas',
+  Tests.SourceLens.ReportPrinter in 'Tests.SourceLens.ReportPrinter.pas',
   Tests.SourceLens.Utils in 'Tests.SourceLens.Utils.pas',
   SemanticTools.DelphiAstParser in '..\src\units\SemanticTools.DelphiAstParser.pas',
+  SourceLens.CliOptions in '..\src\units\SourceLens.CliOptions.pas',
   SemanticTools.Utils in '..\src\units\SemanticTools.Utils.pas',
   SourceLens.DelphiAnalyzer in '..\src\units\SourceLens.DelphiAnalyzer.pas',
+  SourceLens.ReportPrinter in '..\src\units\SourceLens.ReportPrinter.pas',
   SourceLens.Types in '..\src\units\SourceLens.Types.pas';
 
 {$IFNDEF TESTINSIGHT}

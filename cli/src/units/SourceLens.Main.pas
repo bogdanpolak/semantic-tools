@@ -5,14 +5,12 @@ interface
 uses
   System.SysUtils;
 
-const
-  ScanFolder = '..\monopoly\src';
-
 procedure RunSourceLens();
 
 implementation
 
 uses
+  SourceLens.CliOptions,
   SourceLens.Types,
   SemanticTools.FileScanner,
   SourceLens.ReportPrinter,
@@ -27,27 +25,49 @@ begin
   Result := TDelphiAnalyzer.Create(AstParser);
 end;
 
+function GetCommandLineArgs(): TArray<string>;
+var
+  Index: integer;
+begin
+  SetLength(Result, ParamCount);
+  for Index := 1 to ParamCount do
+    Result[Index - 1] := ParamStr(Index);
+end;
+
 procedure RunSourceLens();
 var
+  Options: TSourceLensOptions;
   DelphiAnalyzer: IDelphiAnalyzer;
   AnalysisResult: TAnalysisResult;
   Files: TArray<string>;
 begin
   try
-    DelphiAnalyzer := CreateDelphiAnalyzer();
-    WriteLn('SourceLens - Delphi code metrics analyzer');
-    WriteLn('Current focus: method body size');
-    WriteLn('Scan folder: ', ScanFolder);
+    Options := TSourceLensCommandLine.Parse(GetCommandLineArgs());
+    if Options.ShowHelp then
+    begin
+      WriteLn(TSourceLensCommandLine.GetHelpText());
+      Exit;
+    end;
 
-    Files := TSourceFileScanner.CollectPasFiles(ScanFolder);
-    WriteLn('Found .pas files: ', Length(Files));
+    DelphiAnalyzer := CreateDelphiAnalyzer();
+    Files := TSourceFileScanner.CollectPasFiles(Options.WorkingDir);
 
     AnalysisResult := DelphiAnalyzer.AnalyzeRepository(Files);
 
-    TReportPrinter.Print(AnalysisResult);
+    TReportPrinter.Print(AnalysisResult, Options.ReportFormat);
   except
+    on E: ECommandLineError do
+    begin
+      WriteLn(E.Message);
+      WriteLn;
+      WriteLn(TSourceLensCommandLine.GetHelpText());
+      ExitCode := 1;
+    end;
     on E: Exception do
+    begin
       WriteLn('Fatal error: ', E.ClassName, ': ', E.Message);
+      ExitCode := 1;
+    end;
   end;
 end;
 

@@ -11,7 +11,8 @@ uses
   SourceLens.ReportPrinter in 'units\SourceLens.ReportPrinter.pas',
   SourceLens.DelphiAnalyzer in 'units\SourceLens.DelphiAnalyzer.pas',
   SemanticTools.Utils in 'units\SemanticTools.Utils.pas',
-  SemanticTools.DelphiAstParser in 'units\SemanticTools.DelphiAstParser.pas';
+  SemanticTools.DelphiAstParser in 'units\SemanticTools.DelphiAstParser.pas',
+  SourceLens.CliOptions in 'units\SourceLens.CliOptions.pas';
 
 begin
   RunSourceLens();

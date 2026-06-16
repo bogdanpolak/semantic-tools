@@ -3,6 +3,13 @@ unit SourceLens.Types;
 interface
 
 type
+  TReportFormat = (
+    rfText,
+    rfMarkdown,
+    rfJson,
+    rfCsv
+  );
+
   TMethodInfo = record
     UnitName: string;
     ClassName: string;

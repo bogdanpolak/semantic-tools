@@ -3,7 +3,6 @@ unit SourceLens.ReportPrinter;
 interface
 
 uses
-  System.Classes,
   System.SysUtils,
   System.Generics.Collections,
   System.Generics.Defaults,
@@ -12,10 +11,31 @@ uses
 type
   TReportPrinter = class
   public
-    class procedure Print(const AnalysisResult: TAnalysisResult);
+    class function BuildReport(
+      const AnalysisResult: TAnalysisResult;
+      const AFormat: TReportFormat
+      ): string;
+    class procedure Print(const AnalysisResult: TAnalysisResult); overload;
+    class procedure Print(
+      const AnalysisResult: TAnalysisResult;
+      const AFormat: TReportFormat
+      ); overload;
   end;
 
 implementation
+
+uses
+  System.Classes;
+
+type
+  TReportSummary = record
+    TotalMethods: integer;
+    TotalLines: integer;
+    ParseFailureCount: integer;
+    AverageBodyLines: double;
+    HasLargestMethod: boolean;
+    LargestMethod: TMethodInfo;
+  end;
 
 function CompareMethodInfo(const Left, Right: TMethodInfo): integer;
 var
@@ -45,28 +65,19 @@ begin
   Result := CompareText(LeftQualifiedName, RightQualifiedName);
 end;
 
-function FormatMethodInfo(const MethodInfo: TMethodInfo): string;
-var
-  QualifiedMethodName: string;
+function GetQualifiedMethodName(const MethodInfo: TMethodInfo): string;
 begin
   if MethodInfo.ClassName <> '' then
-    QualifiedMethodName := MethodInfo.ClassName + '.' + MethodInfo.MethodName
+    Result := MethodInfo.ClassName + '.' + MethodInfo.MethodName
   else
-    QualifiedMethodName := MethodInfo.MethodName;
-
-  Result := Format('  %-55s %-28s %5d',
-    [QualifiedMethodName, MethodInfo.UnitName, MethodInfo.BodyLines]);
+    Result := MethodInfo.MethodName;
 end;
 
-class procedure TReportPrinter.Print(const AnalysisResult: TAnalysisResult);
+function GetSortedMethodInfos(
+  const AnalysisResult: TAnalysisResult
+  ): TArray<TMethodInfo>;
 var
   Info: TMethodInfo;
-  ParseFailure: TParseFailure;
-  Line: string;
-  TotalMethods: integer;
-  TotalLines: integer;
-  MaxLines: integer;
-  MaxMethodName: string;
   SortedMethods: TList<TMethodInfo>;
 begin
   SortedMethods := TList<TMethodInfo>.Create;
@@ -83,59 +94,354 @@ begin
       )
     );
 
-    WriteLn;
-    WriteLn('=== SourceLens Report ===');
-    WriteLn;
-    WriteLn(Format('  %-55s %-28s %5s', ['Method name', 'Unit name', 'Size']));
-    WriteLn('  ', StringOfChar('-', 55), ' ', StringOfChar('-', 28),
-      ' ', StringOfChar('-', 5));
-
-    TotalMethods := SortedMethods.Count;
-    TotalLines := 0;
-    MaxLines := 0;
-    MaxMethodName := '';
-
-    for Info in SortedMethods do
-    begin
-      Line := FormatMethodInfo(Info);
-      WriteLn(Line);
-
-      TotalLines := TotalLines + Info.BodyLines;
-      if Info.BodyLines > MaxLines then
-      begin
-        MaxLines := Info.BodyLines;
-        if Info.ClassName <> '' then
-          MaxMethodName := Info.ClassName + '.' + Info.MethodName
-        else
-          MaxMethodName := Info.MethodName;
-      end;
-    end;
-
-    WriteLn;
-    WriteLn('=== Summary ===');
-    WriteLn(Format('  Total methods:      %d', [TotalMethods]));
-    WriteLn(Format('  Total body lines:   %d', [TotalLines]));
-    WriteLn(Format('  Parse failures:     %d',
-      [Length(AnalysisResult.ParseFailures)]));
-    if TotalMethods > 0 then
-      WriteLn(Format('  Average body lines: %.1f',
-        [TotalLines / TotalMethods]));
-    if MaxLines > 0 then
-      WriteLn(Format('  Largest method:     %s (%d lines)',
-        [MaxMethodName, MaxLines]));
-    WriteLn;
-
-    if Length(AnalysisResult.ParseFailures) > 0 then
-    begin
-      WriteLn('=== Parse Failures ===');
-      WriteLn;
-      for ParseFailure in AnalysisResult.ParseFailures do
-        WriteLn('  ', ParseFailure.FileName, ': ', ParseFailure.Message);
-      WriteLn;
-    end;
+    Result := SortedMethods.ToArray;
   finally
     SortedMethods.Free;
   end;
+end;
+
+function BuildSummary(const AnalysisResult: TAnalysisResult): TReportSummary;
+var
+  Info: TMethodInfo;
+begin
+  Result.TotalMethods := Length(AnalysisResult.MethodInfos);
+  Result.TotalLines := 0;
+  Result.ParseFailureCount := Length(AnalysisResult.ParseFailures);
+  Result.AverageBodyLines := 0;
+  Result.HasLargestMethod := False;
+
+  for Info in AnalysisResult.MethodInfos do
+  begin
+    Result.TotalLines := Result.TotalLines + Info.BodyLines;
+
+    if (not Result.HasLargestMethod)
+      or (Info.BodyLines > Result.LargestMethod.BodyLines) then
+    begin
+      Result.HasLargestMethod := True;
+      Result.LargestMethod := Info;
+    end;
+  end;
+
+  if Result.TotalMethods > 0 then
+    Result.AverageBodyLines := Result.TotalLines / Result.TotalMethods;
+end;
+
+function EscapeJsonString(const AValue: string): string;
+begin
+  Result := StringReplace(AValue, '\', '\\', [rfReplaceAll]);
+  Result := StringReplace(Result, '"', '\"', [rfReplaceAll]);
+  Result := StringReplace(Result, #13#10, '\n', [rfReplaceAll]);
+  Result := StringReplace(Result, #13, '\n', [rfReplaceAll]);
+  Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
+  Result := StringReplace(Result, #9, '\t', [rfReplaceAll]);
+end;
+
+function EscapeMarkdown(const AValue: string): string;
+begin
+  Result := StringReplace(AValue, '|', '\|', [rfReplaceAll]);
+end;
+
+function EscapeCsv(const AValue: string): string;
+begin
+  Result := StringReplace(AValue, '"', '""', [rfReplaceAll]);
+  if (Pos(',', Result) > 0)
+    or (Pos('"', Result) > 0)
+    or (Pos(#13, Result) > 0)
+    or (Pos(#10, Result) > 0) then
+    Result := '"' + Result + '"';
+end;
+
+function FormatAverage(const AValue: double): string;
+var
+  FormatSettings: TFormatSettings;
+begin
+  FormatSettings := TFormatSettings.Create;
+  FormatSettings.DecimalSeparator := '.';
+  Result := FormatFloat('0.0', AValue, FormatSettings);
+end;
+
+function FormatMethodInfo(const MethodInfo: TMethodInfo): string;
+var
+  QualifiedMethodName: string;
+begin
+  QualifiedMethodName := GetQualifiedMethodName(MethodInfo);
+
+  Result := Format('  %-55s %-28s %5d',
+    [QualifiedMethodName, MethodInfo.UnitName, MethodInfo.BodyLines]);
+end;
+
+function BuildTextReport(const AnalysisResult: TAnalysisResult): string;
+var
+  Builder: TStringBuilder;
+  Info: TMethodInfo;
+  ParseFailure: TParseFailure;
+  Summary: TReportSummary;
+  SortedMethods: TArray<TMethodInfo>;
+begin
+  Builder := TStringBuilder.Create;
+  try
+    SortedMethods := GetSortedMethodInfos(AnalysisResult);
+    Summary := BuildSummary(AnalysisResult);
+
+    Builder.AppendLine('=== SourceLens Report ===');
+    Builder.AppendLine;
+    Builder.AppendLine(
+      Format('  %-55s %-28s %5s', ['Method name', 'Unit name', 'Size'])
+      );
+    Builder.Append('  ');
+    Builder.Append(StringOfChar('-', 55));
+    Builder.Append(' ');
+    Builder.Append(StringOfChar('-', 28));
+    Builder.Append(' ');
+    Builder.AppendLine(StringOfChar('-', 5));
+
+    for Info in SortedMethods do
+      Builder.AppendLine(FormatMethodInfo(Info));
+
+    Builder.AppendLine;
+    Builder.AppendLine('=== Summary ===');
+    Builder.AppendLine(Format('  Total methods:      %d', [Summary.TotalMethods]));
+    Builder.AppendLine(Format('  Total body lines:   %d', [Summary.TotalLines]));
+    Builder.AppendLine(Format('  Parse failures:     %d', [Summary.ParseFailureCount]));
+    if Summary.TotalMethods > 0 then
+      Builder.AppendLine(
+        Format('  Average body lines: %s', [FormatAverage(Summary.AverageBodyLines)])
+        );
+    if Summary.HasLargestMethod then
+      Builder.AppendLine(
+        Format(
+          '  Largest method:     %s (%d lines)',
+          [GetQualifiedMethodName(Summary.LargestMethod), Summary.LargestMethod.BodyLines]
+          )
+        );
+
+    if Length(AnalysisResult.ParseFailures) > 0 then
+    begin
+      Builder.AppendLine;
+      Builder.AppendLine('=== Parse Failures ===');
+      for ParseFailure in AnalysisResult.ParseFailures do
+        Builder.AppendLine(
+          Format('  %s: %s', [ParseFailure.FileName, ParseFailure.Message])
+          );
+    end;
+
+    Result := Builder.ToString;
+  finally
+    Builder.Free;
+  end;
+end;
+
+function BuildMarkdownReport(const AnalysisResult: TAnalysisResult): string;
+var
+  Builder: TStringBuilder;
+  Info: TMethodInfo;
+  ParseFailure: TParseFailure;
+  Summary: TReportSummary;
+  SortedMethods: TArray<TMethodInfo>;
+begin
+  Builder := TStringBuilder.Create;
+  try
+    SortedMethods := GetSortedMethodInfos(AnalysisResult);
+    Summary := BuildSummary(AnalysisResult);
+
+    Builder.AppendLine('# SourceLens Report');
+    Builder.AppendLine;
+    Builder.AppendLine('| Method name | Unit name | Body lines |');
+    Builder.AppendLine('| --- | --- | ---: |');
+    for Info in SortedMethods do
+      Builder.AppendLine(
+        Format(
+          '| %s | %s | %d |',
+          [
+            EscapeMarkdown(GetQualifiedMethodName(Info)),
+            EscapeMarkdown(Info.UnitName),
+            Info.BodyLines
+          ]
+          )
+        );
+
+    Builder.AppendLine;
+    Builder.AppendLine('## Summary');
+    Builder.AppendLine;
+    Builder.AppendLine(Format('- Total methods: %d', [Summary.TotalMethods]));
+    Builder.AppendLine(Format('- Total body lines: %d', [Summary.TotalLines]));
+    Builder.AppendLine(Format('- Parse failures: %d', [Summary.ParseFailureCount]));
+    if Summary.TotalMethods > 0 then
+      Builder.AppendLine(
+        Format('- Average body lines: %s', [FormatAverage(Summary.AverageBodyLines)])
+        );
+    if Summary.HasLargestMethod then
+      Builder.AppendLine(
+        Format(
+          '- Largest method: %s (%d lines)',
+          [GetQualifiedMethodName(Summary.LargestMethod), Summary.LargestMethod.BodyLines]
+          )
+        );
+
+    if Length(AnalysisResult.ParseFailures) > 0 then
+    begin
+      Builder.AppendLine;
+      Builder.AppendLine('## Parse Failures');
+      Builder.AppendLine;
+      for ParseFailure in AnalysisResult.ParseFailures do
+        Builder.AppendLine(
+          Format(
+            '- %s: %s',
+            [EscapeMarkdown(ParseFailure.FileName), EscapeMarkdown(ParseFailure.Message)]
+            )
+          );
+    end;
+
+    Result := Builder.ToString;
+  finally
+    Builder.Free;
+  end;
+end;
+
+function BuildJsonMethodInfo(const Info: TMethodInfo): string;
+begin
+  Result := Format(
+    '    {"class_name":"%s","method_name":"%s","unit_name":"%s","body_lines":%d}',
+    [
+      EscapeJsonString(Info.ClassName),
+      EscapeJsonString(Info.MethodName),
+      EscapeJsonString(Info.UnitName),
+      Info.BodyLines
+    ]
+    );
+end;
+
+function BuildJsonParseFailure(const ParseFailure: TParseFailure): string;
+begin
+  Result := Format(
+    '    {"file_name":"%s","message":"%s"}',
+    [EscapeJsonString(ParseFailure.FileName), EscapeJsonString(ParseFailure.Message)]
+    );
+end;
+
+function BuildJsonReport(const AnalysisResult: TAnalysisResult): string;
+var
+  Builder: TStringBuilder;
+  Index: integer;
+  Summary: TReportSummary;
+  SortedMethods: TArray<TMethodInfo>;
+begin
+  Builder := TStringBuilder.Create;
+  try
+    SortedMethods := GetSortedMethodInfos(AnalysisResult);
+    Summary := BuildSummary(AnalysisResult);
+
+    Builder.AppendLine('{');
+    Builder.AppendLine('  "method_infos": [');
+    for Index := 0 to High(SortedMethods) do
+    begin
+      Builder.Append(BuildJsonMethodInfo(SortedMethods[Index]));
+      if Index < High(SortedMethods) then
+        Builder.AppendLine(',')
+      else
+        Builder.AppendLine;
+    end;
+    Builder.AppendLine('  ],');
+    Builder.AppendLine('  "summary": {');
+    Builder.AppendLine(Format('    "total_methods": %d,', [Summary.TotalMethods]));
+    Builder.AppendLine(Format('    "total_body_lines": %d,', [Summary.TotalLines]));
+    Builder.AppendLine(Format('    "parse_failures": %d,', [Summary.ParseFailureCount]));
+    Builder.AppendLine(
+      Format('    "average_body_lines": %s,', [FormatAverage(Summary.AverageBodyLines)])
+      );
+    Builder.Append('    "largest_method": ');
+    if Summary.HasLargestMethod then
+      Builder.AppendLine(
+        Format(
+          '{"class_name":"%s","method_name":"%s","unit_name":"%s","body_lines":%d}',
+          [
+            EscapeJsonString(Summary.LargestMethod.ClassName),
+            EscapeJsonString(Summary.LargestMethod.MethodName),
+            EscapeJsonString(Summary.LargestMethod.UnitName),
+            Summary.LargestMethod.BodyLines
+          ]
+          )
+        )
+    else
+      Builder.AppendLine('null');
+    Builder.AppendLine('  },');
+    Builder.AppendLine('  "parse_failures": [');
+    for Index := 0 to High(AnalysisResult.ParseFailures) do
+    begin
+      Builder.Append(BuildJsonParseFailure(AnalysisResult.ParseFailures[Index]));
+      if Index < High(AnalysisResult.ParseFailures) then
+        Builder.AppendLine(',')
+      else
+        Builder.AppendLine;
+    end;
+    Builder.AppendLine('  ]');
+    Builder.Append('}');
+
+    Result := Builder.ToString;
+  finally
+    Builder.Free;
+  end;
+end;
+
+function BuildCsvReport(const AnalysisResult: TAnalysisResult): string;
+var
+  Builder: TStringBuilder;
+  Info: TMethodInfo;
+  SortedMethods: TArray<TMethodInfo>;
+begin
+  Builder := TStringBuilder.Create;
+  try
+    SortedMethods := GetSortedMethodInfos(AnalysisResult);
+    Builder.AppendLine('class_name,method_name,unit_name,body_lines');
+    for Info in SortedMethods do
+      Builder.AppendLine(
+        Format(
+          '%s,%s,%s,%d',
+          [
+            EscapeCsv(Info.ClassName),
+            EscapeCsv(Info.MethodName),
+            EscapeCsv(Info.UnitName),
+            Info.BodyLines
+          ]
+          )
+        );
+
+    Result := Builder.ToString;
+  finally
+    Builder.Free;
+  end;
+end;
+
+class function TReportPrinter.BuildReport(
+  const AnalysisResult: TAnalysisResult;
+  const AFormat: TReportFormat
+  ): string;
+begin
+  case AFormat of
+    rfText:
+      Result := BuildTextReport(AnalysisResult);
+    rfMarkdown:
+      Result := BuildMarkdownReport(AnalysisResult);
+    rfJson:
+      Result := BuildJsonReport(AnalysisResult);
+    rfCsv:
+      Result := BuildCsvReport(AnalysisResult);
+  else
+    raise Exception.Create('Unsupported report format');
+  end;
+end;
+
+class procedure TReportPrinter.Print(const AnalysisResult: TAnalysisResult);
+begin
+  Print(AnalysisResult, rfText);
+end;
+
+class procedure TReportPrinter.Print(
+  const AnalysisResult: TAnalysisResult;
+  const AFormat: TReportFormat
+  );
+begin
+  Write(BuildReport(AnalysisResult, AFormat));
 end;
 
 end.
