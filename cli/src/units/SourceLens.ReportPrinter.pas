@@ -166,8 +166,13 @@ var
 begin
   QualifiedMethodName := GetQualifiedMethodName(MethodInfo);
 
-  Result := Format('  %-55s %-28s %5d',
-    [QualifiedMethodName, MethodInfo.UnitName, MethodInfo.BodyLines]);
+  Result := Format('  %-55s %-28s %5d %7d',
+    [
+      QualifiedMethodName,
+      MethodInfo.UnitName,
+      MethodInfo.BodyLines,
+      MethodInfo.MaxIndentationLevel
+    ]);
 end;
 
 function BuildTextReport(const AnalysisResult: TAnalysisResult): string;
@@ -186,14 +191,19 @@ begin
     Builder.AppendLine('=== SourceLens Report ===');
     Builder.AppendLine;
     Builder.AppendLine(
-      Format('  %-55s %-28s %5s', ['Method name', 'Unit name', 'Size'])
+      Format(
+        '  %-55s %-28s %5s %7s',
+        ['Method name', 'Unit name', 'Size', 'Indent']
+        )
       );
     Builder.Append('  ');
     Builder.Append(StringOfChar('-', 55));
     Builder.Append(' ');
     Builder.Append(StringOfChar('-', 28));
     Builder.Append(' ');
-    Builder.AppendLine(StringOfChar('-', 5));
+    Builder.Append(StringOfChar('-', 5));
+    Builder.Append(' ');
+    Builder.AppendLine(StringOfChar('-', 7));
 
     for Info in SortedMethods do
       Builder.AppendLine(FormatMethodInfo(Info));
@@ -246,16 +256,17 @@ begin
 
     Builder.AppendLine('# SourceLens Report');
     Builder.AppendLine;
-    Builder.AppendLine('| Method name | Unit name | Body lines |');
-    Builder.AppendLine('| --- | --- | ---: |');
+    Builder.AppendLine('| Method name | Unit name | Body lines | Max indentation |');
+    Builder.AppendLine('| --- | --- | ---: | ---: |');
     for Info in SortedMethods do
       Builder.AppendLine(
         Format(
-          '| %s | %s | %d |',
+          '| %s | %s | %d | %d |',
           [
             EscapeMarkdown(GetQualifiedMethodName(Info)),
             EscapeMarkdown(Info.UnitName),
-            Info.BodyLines
+            Info.BodyLines,
+            Info.MaxIndentationLevel
           ]
           )
         );
@@ -301,12 +312,13 @@ end;
 function BuildJsonMethodInfo(const Info: TMethodInfo): string;
 begin
   Result := Format(
-    '    {"class_name":"%s","method_name":"%s","unit_name":"%s","body_lines":%d}',
+    '    {"class_name":"%s","method_name":"%s","unit_name":"%s","body_lines":%d,"max_indentation_level":%d}',
     [
       EscapeJsonString(Info.ClassName),
       EscapeJsonString(Info.MethodName),
       EscapeJsonString(Info.UnitName),
-      Info.BodyLines
+      Info.BodyLines,
+      Info.MaxIndentationLevel
     ]
     );
 end;
@@ -353,12 +365,13 @@ begin
     if Summary.HasLargestMethod then
       Builder.AppendLine(
         Format(
-          '{"class_name":"%s","method_name":"%s","unit_name":"%s","body_lines":%d}',
+          '{"class_name":"%s","method_name":"%s","unit_name":"%s","body_lines":%d,"max_indentation_level":%d}',
           [
             EscapeJsonString(Summary.LargestMethod.ClassName),
             EscapeJsonString(Summary.LargestMethod.MethodName),
             EscapeJsonString(Summary.LargestMethod.UnitName),
-            Summary.LargestMethod.BodyLines
+            Summary.LargestMethod.BodyLines,
+            Summary.LargestMethod.MaxIndentationLevel
           ]
           )
         )
@@ -392,16 +405,19 @@ begin
   Builder := TStringBuilder.Create;
   try
     SortedMethods := GetSortedMethodInfos(AnalysisResult);
-    Builder.AppendLine('class_name,method_name,unit_name,body_lines');
+    Builder.AppendLine(
+      'class_name,method_name,unit_name,body_lines,max_indentation_level'
+      );
     for Info in SortedMethods do
       Builder.AppendLine(
         Format(
-          '%s,%s,%s,%d',
+          '%s,%s,%s,%d,%d',
           [
             EscapeCsv(Info.ClassName),
             EscapeCsv(Info.MethodName),
             EscapeCsv(Info.UnitName),
-            Info.BodyLines
+            Info.BodyLines,
+            Info.MaxIndentationLevel
           ]
           )
         );

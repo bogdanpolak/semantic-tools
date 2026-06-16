@@ -12,7 +12,8 @@ uses
   SourceLens.DelphiAnalyzer in 'units\SourceLens.DelphiAnalyzer.pas',
   SemanticTools.Utils in 'units\SemanticTools.Utils.pas',
   SemanticTools.DelphiAstParser in 'units\SemanticTools.DelphiAstParser.pas',
-  SourceLens.CliOptions in 'units\SourceLens.CliOptions.pas';
+  SourceLens.CliOptions in 'units\SourceLens.CliOptions.pas',
+  SourceLens.Metrics.MaxIndentation in 'units\SourceLens.Metrics.MaxIndentation.pas';
 
 begin
   RunSourceLens();

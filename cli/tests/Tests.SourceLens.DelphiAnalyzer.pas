@@ -40,6 +40,10 @@ type
     procedure AnalyzeUnits_IsolatedPerCall;
     [Test]
     procedure AnalyzeUnits_SupportsIncludesAndConditionalDirectives;
+    [Test]
+    procedure MaxIndentationLevel_IgnoresContinuationLines;
+    [Test]
+    procedure MaxIndentationLevel_IncludedMethod;
   end;
 
 implementation
@@ -95,7 +99,8 @@ begin
   Assert.AreEqual(2, Length(MetodDefs));
   Assert.AreEqual('Unit1 | PublicProcedure', MetodDefs[0]);
   Assert.AreEqual('Unit1 | CheckIfHasMonopoly', MetodDefs[1]);
-  Assert.AreEqual(15, AnalysisResult.MethodInfos[1].BodyLines)
+  Assert.AreEqual(15, AnalysisResult.MethodInfos[1].BodyLines);
+  Assert.AreEqual(6, AnalysisResult.MethodInfos[1].MaxIndentationLevel);
 end;
 
 procedure TDelphiAnalyzerTests.AnalyzeTwoUnits_Broken_Valid;
@@ -302,6 +307,84 @@ begin
   MetodDefs := GetFullMethodNames(AnalysisResult);
   Assert.AreEqual('BaseUnit | TBox.IncludedMethod', MetodDefs[0]);
   Assert.AreEqual('BaseUnit | TBox.WindowsOnlyMethod', MetodDefs[1]);
+  Assert.AreEqual(0, AnalysisResult.MethodInfos[0].MaxIndentationLevel);
+  Assert.AreEqual(0, AnalysisResult.MethodInfos[1].MaxIndentationLevel);
+end;
+
+procedure TDelphiAnalyzerTests.MaxIndentationLevel_IgnoresContinuationLines;
+begin
+  GivenFile('C:\Src\ContinuationUnit.pas', [
+    'unit ContinuationUnit;',
+    '',
+    'interface',
+    '',
+    'type',
+    '  TBox = class',
+    '  public',
+    '    procedure Measure;',
+    '  end;',
+    '',
+    'implementation',
+    '',
+    'procedure TBox.Measure;',
+    'begin',
+    '  ResultText := Format(',
+    '    ''%s %d'',',
+    '    [',
+    '      FirstValue,',
+    '      Length(SecondValue)',
+    '    ]',
+    '  );',
+    'end;',
+    '',
+    'end.'
+  ]);
+
+  AnalysisResult := SUT.AnalyzeRepository(['C:\Src\ContinuationUnit.pas']);
+
+  Assert.AreEqual(0, Length(AnalysisResult.ParseFailures));
+  Assert.AreEqual(1, Length(AnalysisResult.MethodInfos));
+  Assert.AreEqual(2, AnalysisResult.MethodInfos[0].MaxIndentationLevel);
+end;
+
+procedure TDelphiAnalyzerTests.MaxIndentationLevel_IncludedMethod;
+begin
+  GivenFile('C:\Src\shared\IndentedMethodImplementation.inc', [
+    'procedure TBox.IncludedMethod;',
+    'begin',
+    '  if Ready then',
+    '    begin',
+    '      if Confirmed then',
+    '      begin',
+    '        RunFirst;',
+    '      end;',
+    '    end;',
+    'end;'
+  ]);
+
+  GivenFile('C:\Src\IncludedIndentationUnit.pas', [
+    'unit IncludedIndentationUnit;',
+    '',
+    'interface',
+    '',
+    'type',
+    '  TBox = class',
+    '  public',
+    '    procedure IncludedMethod;',
+    '  end;',
+    '',
+    'implementation',
+    '',
+    '{$I shared\IndentedMethodImplementation.inc}',
+    '',
+    'end.'
+  ]);
+
+  AnalysisResult := SUT.AnalyzeRepository(['C:\Src\IncludedIndentationUnit.pas']);
+
+  Assert.AreEqual(0, Length(AnalysisResult.ParseFailures));
+  Assert.AreEqual(1, Length(AnalysisResult.MethodInfos));
+  Assert.AreEqual(8, AnalysisResult.MethodInfos[0].MaxIndentationLevel);
 end;
 
 procedure TDelphiAnalyzerTests.GivenFile(const AFileName: string;

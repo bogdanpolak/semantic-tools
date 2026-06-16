@@ -12,6 +12,7 @@ uses
   DelphiAST.Classes,
   SemanticTools.DelphiAstParser,
   SemanticTools.Utils,
+  SourceLens.Metrics.MaxIndentation,
   SourceLens.Types;
 
 type
@@ -84,6 +85,9 @@ begin
   Result.ClassName := ClassName;
   Result.MethodName := MethodName;
   Result.BodyLines := MethodLoc;
+  Result.MaxIndentationLevel := TMethodIndentationCounter.CalculateMax(
+    AMethodNode as TCompoundSyntaxNode
+    );
 end;
 
 function TDelphiAnalyzer.AnalyzeRepository(

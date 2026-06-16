@@ -89,6 +89,7 @@
         <DCCReference Include="units\SemanticTools.Utils.pas"/>
         <DCCReference Include="units\SemanticTools.DelphiAstParser.pas"/>
         <DCCReference Include="units\SourceLens.CliOptions.pas"/>
+        <DCCReference Include="units\SourceLens.Metrics.MaxIndentation.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

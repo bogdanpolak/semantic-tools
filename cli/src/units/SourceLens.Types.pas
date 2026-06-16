@@ -15,6 +15,7 @@ type
     ClassName: string;
     MethodName: string;
     BodyLines: integer;
+    MaxIndentationLevel: integer;
   end;
 
   TParseFailure = record
