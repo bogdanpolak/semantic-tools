@@ -16,6 +16,7 @@ type
     MethodName: string;
     BodyLines: integer;
     MaxIndentationLevel: integer;
+    CyclomaticComplexity: integer;
   end;
 
   TParseFailure = record

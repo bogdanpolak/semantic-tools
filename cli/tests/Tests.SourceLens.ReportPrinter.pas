@@ -31,12 +31,14 @@ begin
   Result.MethodInfos[0].MethodName := 'ShortMethod';
   Result.MethodInfos[0].BodyLines := 1;
   Result.MethodInfos[0].MaxIndentationLevel := 0;
+  Result.MethodInfos[0].CyclomaticComplexity := 1;
 
   Result.MethodInfos[1].UnitName := 'UnitB';
   Result.MethodInfos[1].ClassName := 'TWidget';
   Result.MethodInfos[1].MethodName := 'LongMethod';
   Result.MethodInfos[1].BodyLines := 7;
   Result.MethodInfos[1].MaxIndentationLevel := 6;
+  Result.MethodInfos[1].CyclomaticComplexity := 4;
 
   SetLength(Result.ParseFailures, 1);
   Result.ParseFailures[0].FileName := 'C:\Broken.pas';
@@ -52,13 +54,13 @@ begin
   Report := TReportPrinter.BuildReport(BuildSampleAnalysisResult(), rfCsv);
 
   Assert.IsTrue(
-    Pos('class_name,method_name,unit_name,body_lines,max_indentation_level', Report) = 1
+    Pos('class_name,method_name,unit_name,body_lines,max_indentation_level,cyclomatic_complexity', Report) = 1
     );
   Assert.IsTrue(Pos('parse_failures', Report) = 0);
   Assert.IsTrue(Pos('Total methods', Report) = 0);
 
-  LongerMethodPos := Pos('TWidget,LongMethod,UnitB,7,6', Report);
-  ShortMethodPos := Pos(',ShortMethod,UnitA,1,0', Report);
+  LongerMethodPos := Pos('TWidget,LongMethod,UnitB,7,6,4', Report);
+  ShortMethodPos := Pos(',ShortMethod,UnitA,1,0,1', Report);
   Assert.IsTrue(LongerMethodPos > 0);
   Assert.IsTrue(ShortMethodPos > 0);
   Assert.IsTrue(LongerMethodPos < ShortMethodPos);
@@ -76,6 +78,7 @@ begin
   Assert.IsTrue(Pos('"class_name":"TWidget"', Report) > 0);
   Assert.IsTrue(Pos('"body_lines":7', Report) > 0);
   Assert.IsTrue(Pos('"max_indentation_level":6', Report) > 0);
+  Assert.IsTrue(Pos('"cyclomatic_complexity":4', Report) > 0);
 end;
 
 procedure TSourceLensReportPrinterTests.BuildReport_Markdown_ContainsTable;
@@ -86,9 +89,9 @@ begin
 
   Assert.IsTrue(Pos('# SourceLens Report', Report) > 0);
   Assert.IsTrue(
-    Pos('| Method name | Unit name | Body lines | Max indentation |', Report) > 0
+    Pos('| Method name | Unit name | Body lines | Max indentation | Cyclomatic complexity |', Report) > 0
     );
-  Assert.IsTrue(Pos('| TWidget.LongMethod | UnitB | 7 | 6 |', Report) > 0);
+  Assert.IsTrue(Pos('| TWidget.LongMethod | UnitB | 7 | 6 | 4 |', Report) > 0);
   Assert.IsTrue(Pos('## Summary', Report) > 0);
 end;
 

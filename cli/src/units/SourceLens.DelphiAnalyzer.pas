@@ -12,6 +12,7 @@ uses
   DelphiAST.Classes,
   SemanticTools.DelphiAstParser,
   SemanticTools.Utils,
+  SourceLens.Metrics.CyclomaticComplexity,
   SourceLens.Metrics.MaxIndentation,
   SourceLens.Types;
 
@@ -86,6 +87,9 @@ begin
   Result.MethodName := MethodName;
   Result.BodyLines := MethodLoc;
   Result.MaxIndentationLevel := TMethodIndentationCounter.CalculateMax(
+    AMethodNode as TCompoundSyntaxNode
+    );
+  Result.CyclomaticComplexity := TMethodCyclomaticComplexity.Calculate(
     AMethodNode as TCompoundSyntaxNode
     );
 end;

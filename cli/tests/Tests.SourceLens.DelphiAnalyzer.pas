@@ -44,6 +44,8 @@ type
     procedure MaxIndentationLevel_IgnoresContinuationLines;
     [Test]
     procedure MaxIndentationLevel_IncludedMethod;
+    [Test]
+    procedure CyclomaticComplexity_CountsCaseAndExceptBranches;
   end;
 
 implementation
@@ -101,6 +103,8 @@ begin
   Assert.AreEqual('Unit1 | CheckIfHasMonopoly', MetodDefs[1]);
   Assert.AreEqual(15, AnalysisResult.MethodInfos[1].BodyLines);
   Assert.AreEqual(6, AnalysisResult.MethodInfos[1].MaxIndentationLevel);
+  Assert.AreEqual(1, AnalysisResult.MethodInfos[0].CyclomaticComplexity);
+  Assert.AreEqual(4, AnalysisResult.MethodInfos[1].CyclomaticComplexity);
 end;
 
 procedure TDelphiAnalyzerTests.AnalyzeTwoUnits_Broken_Valid;
@@ -309,6 +313,8 @@ begin
   Assert.AreEqual('BaseUnit | TBox.WindowsOnlyMethod', MetodDefs[1]);
   Assert.AreEqual(0, AnalysisResult.MethodInfos[0].MaxIndentationLevel);
   Assert.AreEqual(0, AnalysisResult.MethodInfos[1].MaxIndentationLevel);
+  Assert.AreEqual(1, AnalysisResult.MethodInfos[0].CyclomaticComplexity);
+  Assert.AreEqual(1, AnalysisResult.MethodInfos[1].CyclomaticComplexity);
 end;
 
 procedure TDelphiAnalyzerTests.MaxIndentationLevel_IgnoresContinuationLines;
@@ -385,6 +391,50 @@ begin
   Assert.AreEqual(0, Length(AnalysisResult.ParseFailures));
   Assert.AreEqual(1, Length(AnalysisResult.MethodInfos));
   Assert.AreEqual(8, AnalysisResult.MethodInfos[0].MaxIndentationLevel);
+  Assert.AreEqual(3, AnalysisResult.MethodInfos[0].CyclomaticComplexity);
+end;
+
+procedure TDelphiAnalyzerTests.CyclomaticComplexity_CountsCaseAndExceptBranches;
+begin
+  GivenFile('C:\Src\ComplexityUnit.pas', [
+    'unit ComplexityUnit;',
+    '',
+    'interface',
+    '',
+    'type',
+    '  TBox = class',
+    '  public',
+    '    procedure Measure;',
+    '  end;',
+    '',
+    'implementation',
+    '',
+    'procedure TBox.Measure;',
+    'begin',
+    '  case Mode of',
+    '    0:',
+    '      RunZero;',
+    '    1:',
+    '      RunOne;',
+    '  else',
+    '    RunFallback;',
+    '  end;',
+    '',
+    '  try',
+    '    RunMain;',
+    '  except',
+    '    HandleError;',
+    '  end;',
+    'end;',
+    '',
+    'end.'
+  ]);
+
+  AnalysisResult := SUT.AnalyzeRepository(['C:\Src\ComplexityUnit.pas']);
+
+  Assert.AreEqual(0, Length(AnalysisResult.ParseFailures));
+  Assert.AreEqual(1, Length(AnalysisResult.MethodInfos));
+  Assert.AreEqual(5, AnalysisResult.MethodInfos[0].CyclomaticComplexity);
 end;
 
 procedure TDelphiAnalyzerTests.GivenFile(const AFileName: string;

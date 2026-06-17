@@ -7,6 +7,7 @@ This document describes the metrics currently produced by SourceLens and candida
 - **Method identity**: `UnitName`, `ClassName`, `MethodName` — captured for each method (see SourceLens.Types).
 - **Visibility**: `IsPublic` — derived from interface/type declarations via PublicMethod extraction.
 - **BodyLines**: number of executable body lines inside the method. Calculated from the method `ntStatements` node span.
+- **CyclomaticComplexity**: base complexity `1` plus AST decision points such as `if`, loops, `case` branches, and `except` branches.
 - **TestInvocationCount**: heuristic count of method invocations found in parsed test-project ASTs.
 - **Parse failures**: files that failed to parse are surfaced in the analysis result.
 
@@ -19,6 +20,7 @@ Key implementation locations:
 
 ## How the metrics are computed (notes)
 - `BodyLines` uses the `ntStatements` child node's `Line` and `EndLine` to count body lines.
+- `CyclomaticComplexity` traverses the method AST and increments for `ntIf`, `ntFor`, `ntWhile`, `ntRepeat`, `ntCaseLabel`, `ntCaseElse`, and exception branches.
 - `TestInvocationCount` currently parses test-project `.pas` files with DelphiAST and counts resolved call targets. It handles direct function calls, class-qualified calls such as `TGame.Create(...)`, and simple typed receivers such as `FGame.MovePlayerBy(...)`. It still favors a small implementation over full semantic resolution, so chained receivers and more advanced dispatch patterns can be undercounted.
 
 ## Next metric (not yet implemented)
@@ -36,7 +38,6 @@ Implementation details:
 
 ## Candidate additional metrics
 
-- **Cyclomatic complexity**: count of decision points (`if`, `case`, `for`, `while`, `repeat`, `raise/except` branches). Implementation: AST traversal incrementing complexity at branching nodes; add test coverage.
 - **NPath / Nested block depth**: measure number of distinct execution paths or nesting depth beyond indentation (AST-based nested node counting).
 - **Number of statements**: raw count of statement nodes (complements `BodyLines`).
 - **Average statement length**: characters per statement, highlighting very long statements.

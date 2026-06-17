@@ -166,12 +166,13 @@ var
 begin
   QualifiedMethodName := GetQualifiedMethodName(MethodInfo);
 
-  Result := Format('  %-55s %-28s %5d %7d',
+  Result := Format('  %-55s %-28s %5d %7d %10d',
     [
       QualifiedMethodName,
       MethodInfo.UnitName,
       MethodInfo.BodyLines,
-      MethodInfo.MaxIndentationLevel
+      MethodInfo.MaxIndentationLevel,
+      MethodInfo.CyclomaticComplexity
     ]);
 end;
 
@@ -192,8 +193,8 @@ begin
     Builder.AppendLine;
     Builder.AppendLine(
       Format(
-        '  %-55s %-28s %5s %7s',
-        ['Method name', 'Unit name', 'Size', 'Indent']
+        '  %-55s %-28s %5s %7s %10s',
+        ['Method name', 'Unit name', 'Size', 'Indent', 'Complexity']
         )
       );
     Builder.Append('  ');
@@ -203,7 +204,9 @@ begin
     Builder.Append(' ');
     Builder.Append(StringOfChar('-', 5));
     Builder.Append(' ');
-    Builder.AppendLine(StringOfChar('-', 7));
+    Builder.Append(StringOfChar('-', 7));
+    Builder.Append(' ');
+    Builder.AppendLine(StringOfChar('-', 10));
 
     for Info in SortedMethods do
       Builder.AppendLine(FormatMethodInfo(Info));
@@ -256,17 +259,18 @@ begin
 
     Builder.AppendLine('# SourceLens Report');
     Builder.AppendLine;
-    Builder.AppendLine('| Method name | Unit name | Body lines | Max indentation |');
-    Builder.AppendLine('| --- | --- | ---: | ---: |');
+    Builder.AppendLine('| Method name | Unit name | Body lines | Max indentation | Cyclomatic complexity |');
+    Builder.AppendLine('| --- | --- | ---: | ---: | ---: |');
     for Info in SortedMethods do
       Builder.AppendLine(
         Format(
-          '| %s | %s | %d | %d |',
+          '| %s | %s | %d | %d | %d |',
           [
             EscapeMarkdown(GetQualifiedMethodName(Info)),
             EscapeMarkdown(Info.UnitName),
             Info.BodyLines,
-            Info.MaxIndentationLevel
+            Info.MaxIndentationLevel,
+            Info.CyclomaticComplexity
           ]
           )
         );
@@ -312,13 +316,14 @@ end;
 function BuildJsonMethodInfo(const Info: TMethodInfo): string;
 begin
   Result := Format(
-    '    {"class_name":"%s","method_name":"%s","unit_name":"%s","body_lines":%d,"max_indentation_level":%d}',
+    '    {"class_name":"%s","method_name":"%s","unit_name":"%s","body_lines":%d,"max_indentation_level":%d,"cyclomatic_complexity":%d}',
     [
       EscapeJsonString(Info.ClassName),
       EscapeJsonString(Info.MethodName),
       EscapeJsonString(Info.UnitName),
       Info.BodyLines,
-      Info.MaxIndentationLevel
+      Info.MaxIndentationLevel,
+      Info.CyclomaticComplexity
     ]
     );
 end;
@@ -365,13 +370,14 @@ begin
     if Summary.HasLargestMethod then
       Builder.AppendLine(
         Format(
-          '{"class_name":"%s","method_name":"%s","unit_name":"%s","body_lines":%d,"max_indentation_level":%d}',
+          '{"class_name":"%s","method_name":"%s","unit_name":"%s","body_lines":%d,"max_indentation_level":%d,"cyclomatic_complexity":%d}',
           [
             EscapeJsonString(Summary.LargestMethod.ClassName),
             EscapeJsonString(Summary.LargestMethod.MethodName),
             EscapeJsonString(Summary.LargestMethod.UnitName),
             Summary.LargestMethod.BodyLines,
-            Summary.LargestMethod.MaxIndentationLevel
+            Summary.LargestMethod.MaxIndentationLevel,
+            Summary.LargestMethod.CyclomaticComplexity
           ]
           )
         )
@@ -406,18 +412,19 @@ begin
   try
     SortedMethods := GetSortedMethodInfos(AnalysisResult);
     Builder.AppendLine(
-      'class_name,method_name,unit_name,body_lines,max_indentation_level'
+      'class_name,method_name,unit_name,body_lines,max_indentation_level,cyclomatic_complexity'
       );
     for Info in SortedMethods do
       Builder.AppendLine(
         Format(
-          '%s,%s,%s,%d,%d',
+          '%s,%s,%s,%d,%d,%d',
           [
             EscapeCsv(Info.ClassName),
             EscapeCsv(Info.MethodName),
             EscapeCsv(Info.UnitName),
             Info.BodyLines,
-            Info.MaxIndentationLevel
+            Info.MaxIndentationLevel,
+            Info.CyclomaticComplexity
           ]
           )
         );
